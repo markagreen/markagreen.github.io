@@ -1,4 +1,4 @@
-intro
+whymap
 why-map
 mapping-in-r
 areas
