@@ -24,7 +24,7 @@
 <meta name="author" content="Mark Green" />
 
 
-<meta name="date" content="2021-10-07" />
+<meta name="date" content="2021-10-15" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -53,6 +53,16 @@
 
 <link href="libs/anchor-sections-1.0.1/anchor-sections.css" rel="stylesheet" />
 <script src="libs/anchor-sections-1.0.1/anchor-sections.js"></script>
+<script src="libs/htmlwidgets-1.5.1/htmlwidgets.js"></script>
+<link href="libs/leaflet-1.3.1/leaflet.css" rel="stylesheet" />
+<script src="libs/leaflet-1.3.1/leaflet.js"></script>
+<link href="libs/leafletfix-1.0.0/leafletfix.css" rel="stylesheet" />
+<script src="libs/Proj4Leaflet-1.0.1/proj4-compressed.js"></script>
+<script src="libs/Proj4Leaflet-1.0.1/proj4leaflet.js"></script>
+<link href="libs/rstudio_leaflet-1.3.1/rstudio_leaflet.css" rel="stylesheet" />
+<script src="libs/leaflet-binding-2.0.3/leaflet.js"></script>
+<script src="libs/leaflet-providers-1.9.0/leaflet-providers_1.9.0.js"></script>
+<script src="libs/leaflet-providers-plugin-2.0.3/leaflet-providers-plugin.js"></script>
 
 
 <style type="text/css">
@@ -119,6 +129,28 @@ code span.vs { color: #4070a0; } /* VerbatimString */
 code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
 </style>
 
+<style type="text/css">
+/* Used with Pandoc 2.11+ new --citeproc when CSL is used */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}
+</style>
 
 <link rel="stylesheet" href="style.css" type="text/css" />
 </head>
@@ -232,46 +264,42 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div id="loading-data" class="section level2" number="4.1">
 <h2><span class="header-section-number">4.1</span> Loading data</h2>
 <p>We will use the same data introduced in the <a href="%7B#spatreg%7D">previous session</a>. We will this time look at second dose uptake to mix it up. Let’s quickly load in the data and tidy it.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="gwr.html#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load package</span></span>
-<span id="cb1-2"><a href="gwr.html#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sf)</span></code></pre></div>
-<pre><code>## Registered S3 methods overwritten by &#39;tibble&#39;:
-##   method     from  
-##   format.tbl pillar
-##   print.tbl  pillar</code></pre>
-<pre><code>## Linking to GEOS 3.7.2, GDAL 2.4.2, PROJ 5.2.0</code></pre>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="gwr.html#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load and clean spatial data</span></span>
-<span id="cb4-2"><a href="gwr.html#cb4-2" aria-hidden="true" tabindex="-1"></a>lad_uk <span class="ot">&lt;-</span> <span class="fu">read_sf</span>(<span class="st">&quot;./Shapefiles/UK_LAD/Local_Authority_Districts_(December_2019)_Boundaries_UK_BFC.shp&quot;</span>) <span class="co"># Load shapefile for Local Authority Districts (LADs) for UK (sorry but could not find only England version so need to convert to match data)</span></span>
-<span id="cb4-3"><a href="gwr.html#cb4-3" aria-hidden="true" tabindex="-1"></a>lad_uk<span class="sc">$</span>country <span class="ot">&lt;-</span> <span class="fu">substr</span>(lad_uk<span class="sc">$</span>lad19cd, <span class="dv">0</span>, <span class="dv">1</span>) <span class="co"># Record first letter of LAD code (denotes country)</span></span>
-<span id="cb4-4"><a href="gwr.html#cb4-4" aria-hidden="true" tabindex="-1"></a>lad_eng <span class="ot">&lt;-</span> lad_uk[lad_uk<span class="sc">$</span>country <span class="sc">==</span> <span class="st">&quot;E&quot;</span>,] <span class="co"># Subset only English LADs</span></span>
-<span id="cb4-5"><a href="gwr.html#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-6"><a href="gwr.html#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Tidy and join on explanatory variables</span></span>
-<span id="cb4-7"><a href="gwr.html#cb4-7" aria-hidden="true" tabindex="-1"></a>lad_data <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">&quot;./Data/LAD_vaccine_data.csv&quot;</span>) <span class="co"># Load vaccine uptake and demographic data for England</span></span>
-<span id="cb4-8"><a href="gwr.html#cb4-8" aria-hidden="true" tabindex="-1"></a>lad_eng <span class="ot">&lt;-</span> <span class="fu">merge</span>(lad_eng, lad_data, <span class="at">by.x =</span> <span class="st">&quot;lad19cd&quot;</span>, <span class="at">by.y =</span> <span class="st">&quot;ltla_code&quot;</span>, <span class="at">all.x =</span> <span class="cn">TRUE</span>) <span class="co"># Join on both datasets</span></span>
-<span id="cb4-9"><a href="gwr.html#cb4-9" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>pop_density <span class="ot">&lt;-</span> lad_eng<span class="sc">$</span>population <span class="sc">/</span> (lad_eng<span class="sc">$</span>st_areasha <span class="sc">/</span> <span class="dv">1000000</span>) <span class="co"># Calculate population density (st_areashape is measured in metres^2 so need to convert to km^2 by dividing by 1,000,000)</span></span>
-<span id="cb4-10"><a href="gwr.html#cb4-10" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>percent_first_dose <span class="ot">&lt;-</span> (lad_eng<span class="sc">$</span>total_first_dose <span class="sc">/</span> lad_eng<span class="sc">$</span>population) <span class="sc">*</span> <span class="dv">100</span> <span class="co"># Calculate percent of population who have had their first dose</span></span>
-<span id="cb4-11"><a href="gwr.html#cb4-11" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>percent_second_dose <span class="ot">&lt;-</span> (lad_eng<span class="sc">$</span>total_second_dose <span class="sc">/</span> lad_eng<span class="sc">$</span>population) <span class="sc">*</span> <span class="dv">100</span> <span class="co"># Calculate percent of population who have had their first dose</span></span>
-<span id="cb4-12"><a href="gwr.html#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-13"><a href="gwr.html#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove objects to save space</span></span>
-<span id="cb4-14"><a href="gwr.html#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(lad_uk, lad_data) </span></code></pre></div>
+<div class="sourceCode" id="cb107"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb107-1"><a href="gwr.html#cb107-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load package</span></span>
+<span id="cb107-2"><a href="gwr.html#cb107-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sf)</span>
+<span id="cb107-3"><a href="gwr.html#cb107-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb107-4"><a href="gwr.html#cb107-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Load and clean spatial data</span></span>
+<span id="cb107-5"><a href="gwr.html#cb107-5" aria-hidden="true" tabindex="-1"></a>lad_uk <span class="ot">&lt;-</span> <span class="fu">read_sf</span>(<span class="st">&quot;./Shapefiles/UK_LAD/Local_Authority_Districts_(December_2019)_Boundaries_UK_BFC.shp&quot;</span>) <span class="co"># Load shapefile for Local Authority Districts (LADs) for UK (sorry but could not find only England version so need to convert to match data)</span></span>
+<span id="cb107-6"><a href="gwr.html#cb107-6" aria-hidden="true" tabindex="-1"></a>lad_uk<span class="sc">$</span>country <span class="ot">&lt;-</span> <span class="fu">substr</span>(lad_uk<span class="sc">$</span>lad19cd, <span class="dv">0</span>, <span class="dv">1</span>) <span class="co"># Record first letter of LAD code (denotes country)</span></span>
+<span id="cb107-7"><a href="gwr.html#cb107-7" aria-hidden="true" tabindex="-1"></a>lad_eng <span class="ot">&lt;-</span> lad_uk[lad_uk<span class="sc">$</span>country <span class="sc">==</span> <span class="st">&quot;E&quot;</span>,] <span class="co"># Subset only English LADs</span></span>
+<span id="cb107-8"><a href="gwr.html#cb107-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb107-9"><a href="gwr.html#cb107-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Tidy and join on explanatory variables</span></span>
+<span id="cb107-10"><a href="gwr.html#cb107-10" aria-hidden="true" tabindex="-1"></a>lad_data <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">&quot;./Data/LAD_vaccine_data.csv&quot;</span>) <span class="co"># Load vaccine uptake and demographic data for England</span></span>
+<span id="cb107-11"><a href="gwr.html#cb107-11" aria-hidden="true" tabindex="-1"></a>lad_eng <span class="ot">&lt;-</span> <span class="fu">merge</span>(lad_eng, lad_data, <span class="at">by.x =</span> <span class="st">&quot;lad19cd&quot;</span>, <span class="at">by.y =</span> <span class="st">&quot;ltla_code&quot;</span>, <span class="at">all.x =</span> <span class="cn">TRUE</span>) <span class="co"># Join on both datasets</span></span>
+<span id="cb107-12"><a href="gwr.html#cb107-12" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>pop_density <span class="ot">&lt;-</span> lad_eng<span class="sc">$</span>population <span class="sc">/</span> (lad_eng<span class="sc">$</span>st_areasha <span class="sc">/</span> <span class="dv">1000000</span>) <span class="co"># Calculate population density (st_areashape is measured in metres^2 so need to convert to km^2 by dividing by 1,000,000)</span></span>
+<span id="cb107-13"><a href="gwr.html#cb107-13" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>percent_first_dose <span class="ot">&lt;-</span> (lad_eng<span class="sc">$</span>total_first_dose <span class="sc">/</span> lad_eng<span class="sc">$</span>population) <span class="sc">*</span> <span class="dv">100</span> <span class="co"># Calculate percent of population who have had their first dose</span></span>
+<span id="cb107-14"><a href="gwr.html#cb107-14" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>percent_second_dose <span class="ot">&lt;-</span> (lad_eng<span class="sc">$</span>total_second_dose <span class="sc">/</span> lad_eng<span class="sc">$</span>population) <span class="sc">*</span> <span class="dv">100</span> <span class="co"># Calculate percent of population who have had their first dose</span></span>
+<span id="cb107-15"><a href="gwr.html#cb107-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb107-16"><a href="gwr.html#cb107-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove objects to save space</span></span>
+<span id="cb107-17"><a href="gwr.html#cb107-17" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(lad_uk, lad_data) </span></code></pre></div>
 <p>Let’s have a look at the spatial pattern of the variable.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="gwr.html#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load packages</span></span>
-<span id="cb5-2"><a href="gwr.html#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2) </span>
-<span id="cb5-3"><a href="gwr.html#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(viridis)</span></code></pre></div>
-<pre><code>## Loading required package: viridisLite</code></pre>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="gwr.html#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
-<span id="cb7-2"><a href="gwr.html#cb7-2" aria-hidden="true" tabindex="-1"></a>map1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="co"># Call ggplot command</span></span>
-<span id="cb7-3"><a href="gwr.html#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng, <span class="fu">aes</span>(<span class="at">fill =</span> percent_second_dose), <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Define what to plot</span></span>
-<span id="cb7-4"><a href="gwr.html#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis</span>() <span class="sc">+</span> <span class="co"># Make colourblind friendly</span></span>
-<span id="cb7-5"><a href="gwr.html#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">&quot;Longitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add x-axis label</span></span>
-<span id="cb7-6"><a href="gwr.html#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">&quot;Latitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add y-axis label</span></span>
-<span id="cb7-7"><a href="gwr.html#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Second dose uptake&quot;</span>, <span class="co"># Edit plot title</span></span>
-<span id="cb7-8"><a href="gwr.html#cb7-8" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">&quot;Percent (%)&quot;</span>) <span class="co"># Edit legend title</span></span>
-<span id="cb7-9"><a href="gwr.html#cb7-9" aria-hidden="true" tabindex="-1"></a>map1 <span class="co"># Print plot</span></span></code></pre></div>
-<p><img src="Spatial-Data_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<div class="sourceCode" id="cb108"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb108-1"><a href="gwr.html#cb108-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load packages</span></span>
+<span id="cb108-2"><a href="gwr.html#cb108-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2) </span>
+<span id="cb108-3"><a href="gwr.html#cb108-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(viridis)</span>
+<span id="cb108-4"><a href="gwr.html#cb108-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb108-5"><a href="gwr.html#cb108-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
+<span id="cb108-6"><a href="gwr.html#cb108-6" aria-hidden="true" tabindex="-1"></a>map1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="co"># Call ggplot command</span></span>
+<span id="cb108-7"><a href="gwr.html#cb108-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng, <span class="fu">aes</span>(<span class="at">fill =</span> percent_second_dose), <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Define what to plot</span></span>
+<span id="cb108-8"><a href="gwr.html#cb108-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis</span>() <span class="sc">+</span> <span class="co"># Make colourblind friendly</span></span>
+<span id="cb108-9"><a href="gwr.html#cb108-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">&quot;Longitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add x-axis label</span></span>
+<span id="cb108-10"><a href="gwr.html#cb108-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">&quot;Latitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add y-axis label</span></span>
+<span id="cb108-11"><a href="gwr.html#cb108-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Second dose uptake&quot;</span>, <span class="co"># Edit plot title</span></span>
+<span id="cb108-12"><a href="gwr.html#cb108-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">&quot;Percent (%)&quot;</span>) <span class="co"># Edit legend title</span></span>
+<span id="cb108-13"><a href="gwr.html#cb108-13" aria-hidden="true" tabindex="-1"></a>map1 <span class="co"># Print plot</span></span></code></pre></div>
+<p><img src="Spatial-Data_files/figure-html/unnamed-chunk-64-1.png" width="672" /></p>
 <p>We can see lower uptake in urban areas and higher uptake in rural regions. This is likely reflecting differences in the age-structure of areas.</p>
 <p>Let’s use a standard linear regression model to examine the factors that are associated with the percentage of individuals who are fully vaccinated (i.e., received their second vaccine dose). This will be useful to compare to the <strong>Geographically Weighted Regression (GWR)</strong> model later.</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="gwr.html#cb8-1" aria-hidden="true" tabindex="-1"></a>model1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(percent_second_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng) <span class="co"># OLS model</span></span>
-<span id="cb8-2"><a href="gwr.html#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model1) <span class="co"># Print model results</span></span></code></pre></div>
+<div class="sourceCode" id="cb109"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb109-1"><a href="gwr.html#cb109-1" aria-hidden="true" tabindex="-1"></a>model1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(percent_second_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng) <span class="co"># OLS model</span></span>
+<span id="cb109-2"><a href="gwr.html#cb109-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model1) <span class="co"># Print model results</span></span></code></pre></div>
 <pre><code>## 
 ## Call:
 ## lm(formula = percent_second_dose ~ median_age + Other_White + 
@@ -311,15 +339,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>GWR is a technique that allows us to examine how associations between variables may vary across space. It works through selecting a ‘search window’ (here defined as surrounding areas) over each data point (Local Authority District in our example), estimating a regression equation (for the data point and data points in the search window, with closer neighbouring data points given larger weightings), and then repeating the process for all data points. This means the process estimates <em>n</em> regression equations each time (you can probably see here how it can become computationally intensive). The result is a series of regression coefficients for each variable and each area, allowing us to explore how coefficients vary across space.</p>
 <p>To be able to estimate a model, we need to define the ‘search window.’ This consists of two components: (i) a spatial kernel, and (ii) bandwidth. The <strong>spatial kernel</strong> refers to the weighting mechanism that gives greater importance/weighting to data points located closer to each data point (and vice versa), and the extent that the weighting changes with distance. The kernel can be fixed (i.e., the same bandwidth, such as a fixed distance, is used for each regression) or adaptive (i.e., varying bandwidths are used, such as nearest number of neighbours). <strong>Bandwidith</strong> is the extent of the kernel (i.e., how big an area it covers).</p>
 <p>We can optimise the bandwidth value using a cross-validation. Here we estimate a regression model for a particular location with a set bandwidth value. We then compare the predicted outcome value for the model to the observed/actual value, which gives us the residual error. We can then vary the bandwidth value and see how the residual changes, with the aim of minimising it.</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="gwr.html#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(spgwr) <span class="co"># Load package</span></span></code></pre></div>
-<pre><code>## Loading required package: sp</code></pre>
-<pre><code>## Loading required package: spData</code></pre>
-<pre><code>## To access larger datasets in this package, install the spDataLarge
-## package with: `install.packages(&#39;spDataLarge&#39;,
-## repos=&#39;https://nowosad.github.io/drat/&#39;, type=&#39;source&#39;)`</code></pre>
+<div class="sourceCode" id="cb111"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb111-1"><a href="gwr.html#cb111-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(spgwr) <span class="co"># Load package</span></span></code></pre></div>
 <pre><code>## NOTE: This package does not constitute approval of GWR
 ## as a method of spatial analysis; see example(gwr)</code></pre>
-<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="gwr.html#cb15-1" aria-hidden="true" tabindex="-1"></a>fixed_bandwidth <span class="ot">&lt;-</span> <span class="fu">gwr.sel</span>(percent_second_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng, <span class="at">coords =</span> <span class="fu">cbind</span>(lad_eng<span class="sc">$</span>long, lad_eng<span class="sc">$</span>lat), <span class="at">adapt =</span> <span class="cn">FALSE</span>, <span class="at">method =</span> <span class="st">&quot;cv&quot;</span>, <span class="at">longlat =</span> <span class="cn">TRUE</span>) <span class="co"># Select best fixed bandwidth for GWR (can be slow)</span></span></code></pre></div>
+<div class="sourceCode" id="cb113"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb113-1"><a href="gwr.html#cb113-1" aria-hidden="true" tabindex="-1"></a>fixed_bandwidth <span class="ot">&lt;-</span> <span class="fu">gwr.sel</span>(percent_second_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng, <span class="at">coords =</span> <span class="fu">cbind</span>(lad_eng<span class="sc">$</span>long, lad_eng<span class="sc">$</span>lat), <span class="at">adapt =</span> <span class="cn">FALSE</span>, <span class="at">method =</span> <span class="st">&quot;cv&quot;</span>, <span class="at">longlat =</span> <span class="cn">TRUE</span>) <span class="co"># Select best fixed bandwidth for GWR (can be slow)</span></span></code></pre></div>
 <pre><code>## Bandwidth: 307.6284 CV score: 2247.438 
 ## Bandwidth: 497.2562 CV score: 2262.816 
 ## Bandwidth: 190.4319 CV score: 2214.023 
@@ -337,11 +360,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## Bandwidth: 46.81261 CV score: 1916.005 
 ## Bandwidth: 46.81253 CV score: 1916.005 
 ## Bandwidth: 46.81257 CV score: 1916.005</code></pre>
-<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="gwr.html#cb17-1" aria-hidden="true" tabindex="-1"></a>fixed_bandwidth</span></code></pre></div>
+<div class="sourceCode" id="cb115"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb115-1"><a href="gwr.html#cb115-1" aria-hidden="true" tabindex="-1"></a>fixed_bandwidth</span></code></pre></div>
 <pre><code>## [1] 46.81257</code></pre>
 <p>The output prints details of the model fitting process, but you can switch this off by adding <code>verbose = FALSE</code>. The optimised bandwidth for our model is 46.8125698 kilometers (km). The value suggests that a fixed radius of this distance is set and placed around each data point (area).</p>
 <p>Let’s repeat the process, but this time estimate an adaptive bandwidth. This will be useful for comparing model fit later.</p>
-<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="gwr.html#cb19-1" aria-hidden="true" tabindex="-1"></a>adaptive_bandwidth <span class="ot">&lt;-</span> <span class="fu">gwr.sel</span>(percent_second_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng, <span class="at">coords =</span> <span class="fu">cbind</span>(lad_eng<span class="sc">$</span>long, lad_eng<span class="sc">$</span>lat), <span class="at">adapt =</span> <span class="cn">TRUE</span>, <span class="at">method =</span> <span class="st">&quot;cv&quot;</span>, <span class="at">longlat =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="cn">TRUE</span>) <span class="co"># Select best adaptive bandwidth for GWR (can be slow)</span></span></code></pre></div>
+<div class="sourceCode" id="cb117"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb117-1"><a href="gwr.html#cb117-1" aria-hidden="true" tabindex="-1"></a>adaptive_bandwidth <span class="ot">&lt;-</span> <span class="fu">gwr.sel</span>(percent_second_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng, <span class="at">coords =</span> <span class="fu">cbind</span>(lad_eng<span class="sc">$</span>long, lad_eng<span class="sc">$</span>lat), <span class="at">adapt =</span> <span class="cn">TRUE</span>, <span class="at">method =</span> <span class="st">&quot;cv&quot;</span>, <span class="at">longlat =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="cn">TRUE</span>) <span class="co"># Select best adaptive bandwidth for GWR (can be slow)</span></span></code></pre></div>
 <pre><code>## Adaptive q: 0.381966 CV score: 2125.007 
 ## Adaptive q: 0.618034 CV score: 2211.108 
 ## Adaptive q: 0.236068 CV score: 2016.777 
@@ -361,7 +384,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## Adaptive q: 0.02196273 CV score: 1688.48 
 ## Adaptive q: 0.0220323 CV score: 1688.268 
 ## Adaptive q: 0.0220753 CV score: 1688.142</code></pre>
-<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="gwr.html#cb21-1" aria-hidden="true" tabindex="-1"></a>adaptive_bandwidth</span></code></pre></div>
+<div class="sourceCode" id="cb119"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb119-1"><a href="gwr.html#cb119-1" aria-hidden="true" tabindex="-1"></a>adaptive_bandwidth</span></code></pre></div>
 <pre><code>## [1] 0.0220753</code></pre>
 <p>Here the value of 0.0220753 presents the optimal proportion of neighbours (or k-nearest neighbours) to select as the bandwidth. In this example, we should select 2.2075297% of areas surrounding each data point (or nearest neighbours), or equivalent to selecting <code>nrow(lad_eng) * adaptive_bandwidth</code> areas around each data point each time we run a regression.</p>
 </div>
@@ -371,65 +394,65 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div id="assessing-model-fit" class="section level3" number="4.3.1">
 <h3><span class="header-section-number">4.3.1</span> Assessing model fit</h3>
 <p>We have so far two types of bandwidth to use in fitting our GWR model. We need to identify which we will use for reporting our results. To make a decision, we will fit two GWR models, one for each of the two bandwidths, and compare their model fits to see which performs better.</p>
-<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="gwr.html#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Model with fixed bandwidth</span></span>
-<span id="cb23-2"><a href="gwr.html#cb23-2" aria-hidden="true" tabindex="-1"></a>model2_fixed <span class="ot">&lt;-</span> <span class="fu">gwr</span>(percent_second_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng, <span class="at">coords =</span> <span class="fu">cbind</span>(lad_eng<span class="sc">$</span>long, lad_eng<span class="sc">$</span>lat), <span class="at">bandwidth =</span> fixed_bandwidth, <span class="at">hatmatrix =</span> <span class="cn">TRUE</span>, <span class="at">se.fit =</span> <span class="cn">TRUE</span>, <span class="at">longlat =</span> <span class="cn">TRUE</span>) </span>
-<span id="cb23-3"><a href="gwr.html#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-4"><a href="gwr.html#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Model with adaptive bandwidth</span></span>
-<span id="cb23-5"><a href="gwr.html#cb23-5" aria-hidden="true" tabindex="-1"></a>model2_adapt <span class="ot">&lt;-</span> <span class="fu">gwr</span>(percent_second_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng, <span class="at">coords =</span> <span class="fu">cbind</span>(lad_eng<span class="sc">$</span>long, lad_eng<span class="sc">$</span>lat), <span class="at">adapt =</span> adaptive_bandwidth, <span class="at">hatmatrix =</span> <span class="cn">TRUE</span>, <span class="at">se.fit =</span> <span class="cn">TRUE</span>, <span class="at">longlat =</span> <span class="cn">TRUE</span>) <span class="co"># note we use adapt for the bandwidth here</span></span></code></pre></div>
+<div class="sourceCode" id="cb121"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb121-1"><a href="gwr.html#cb121-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Model with fixed bandwidth</span></span>
+<span id="cb121-2"><a href="gwr.html#cb121-2" aria-hidden="true" tabindex="-1"></a>model2_fixed <span class="ot">&lt;-</span> <span class="fu">gwr</span>(percent_second_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng, <span class="at">coords =</span> <span class="fu">cbind</span>(lad_eng<span class="sc">$</span>long, lad_eng<span class="sc">$</span>lat), <span class="at">bandwidth =</span> fixed_bandwidth, <span class="at">hatmatrix =</span> <span class="cn">TRUE</span>, <span class="at">se.fit =</span> <span class="cn">TRUE</span>, <span class="at">longlat =</span> <span class="cn">TRUE</span>) </span>
+<span id="cb121-3"><a href="gwr.html#cb121-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb121-4"><a href="gwr.html#cb121-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Model with adaptive bandwidth</span></span>
+<span id="cb121-5"><a href="gwr.html#cb121-5" aria-hidden="true" tabindex="-1"></a>model2_adapt <span class="ot">&lt;-</span> <span class="fu">gwr</span>(percent_second_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng, <span class="at">coords =</span> <span class="fu">cbind</span>(lad_eng<span class="sc">$</span>long, lad_eng<span class="sc">$</span>lat), <span class="at">adapt =</span> adaptive_bandwidth, <span class="at">hatmatrix =</span> <span class="cn">TRUE</span>, <span class="at">se.fit =</span> <span class="cn">TRUE</span>, <span class="at">longlat =</span> <span class="cn">TRUE</span>) <span class="co"># note we use adapt for the bandwidth here</span></span></code></pre></div>
 <p>Let’s compare the overall model fit for both of these models. We will just look at the corrected AIC values</p>
-<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="gwr.html#cb24-1" aria-hidden="true" tabindex="-1"></a>model2_fixed<span class="sc">$</span>results<span class="sc">$</span>AICh <span class="co"># AIC - fixed bandwidth</span></span></code></pre></div>
+<div class="sourceCode" id="cb122"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb122-1"><a href="gwr.html#cb122-1" aria-hidden="true" tabindex="-1"></a>model2_fixed<span class="sc">$</span>results<span class="sc">$</span>AICh <span class="co"># AIC - fixed bandwidth</span></span></code></pre></div>
 <pre><code>## [1] 1348.313</code></pre>
-<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="gwr.html#cb26-1" aria-hidden="true" tabindex="-1"></a>model2_adapt<span class="sc">$</span>results<span class="sc">$</span>AICh <span class="co"># AIC - adaptive bandwidth</span></span></code></pre></div>
+<div class="sourceCode" id="cb124"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb124-1"><a href="gwr.html#cb124-1" aria-hidden="true" tabindex="-1"></a>model2_adapt<span class="sc">$</span>results<span class="sc">$</span>AICh <span class="co"># AIC - adaptive bandwidth</span></span></code></pre></div>
 <pre><code>## [1] 1246.369</code></pre>
-<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="gwr.html#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># model2_fixed$results$AICb # AIC corrected for small sample sizes - fixed bandwidth </span></span>
-<span id="cb28-2"><a href="gwr.html#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="co"># model2_adapt$results$AICb # AIC corrected for small sample sizes - adaptive bandwidth</span></span></code></pre></div>
+<div class="sourceCode" id="cb126"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb126-1"><a href="gwr.html#cb126-1" aria-hidden="true" tabindex="-1"></a><span class="co"># model2_fixed$results$AICb # AIC corrected for small sample sizes - fixed bandwidth </span></span>
+<span id="cb126-2"><a href="gwr.html#cb126-2" aria-hidden="true" tabindex="-1"></a><span class="co"># model2_adapt$results$AICb # AIC corrected for small sample sizes - adaptive bandwidth</span></span></code></pre></div>
 <p>The adaptive bandwidth model has better fit (lower value) and therefore may be preferable on this statistic.</p>
 <p>We will next compare the compare the range of local r2 values, to assess model fit performance of our regression models..</p>
-<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="gwr.html#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model2_fixed<span class="sc">$</span>SDF<span class="sc">$</span>localR2)</span></code></pre></div>
+<div class="sourceCode" id="cb127"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb127-1"><a href="gwr.html#cb127-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model2_fixed<span class="sc">$</span>SDF<span class="sc">$</span>localR2)</span></code></pre></div>
 <pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
 ##  0.6948  0.9080  0.9268  0.9249  0.9409  0.9999</code></pre>
-<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="gwr.html#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model2_adapt<span class="sc">$</span>SDF<span class="sc">$</span>localR2)</span></code></pre></div>
+<div class="sourceCode" id="cb129"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb129-1"><a href="gwr.html#cb129-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model2_adapt<span class="sc">$</span>SDF<span class="sc">$</span>localR2)</span></code></pre></div>
 <pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
 ##  0.8521  0.9513  0.9664  0.9607  0.9733  0.9925</code></pre>
 <p>Mean and median R2 is higher with the adaptive bandwidth selected, suggesting that on average each areas model fit is better here. If we look at the minimum values, model fit is poorer for the fixed bandwidth as well suggesting the model does less well in particular areas.</p>
 <p>Next, we compare the local model fit values to see if one of the models is under/over-performing in particular parts of England. This can give us clues towards whether there are geographical issues in model fit. For example, the use of fixed bandwidths can often lead to too many dissimilar data points selected in regression models (leading to poorer fitting models), or too few data points leading to large uncertainty in estimates. Adaptive bandwidths may vary in their performance spatially given their different sizes of bandwidths.</p>
 <p>First, we plot the local R^2 values for the fixed bandwidth model.</p>
-<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb33-1"><a href="gwr.html#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Tidy data</span></span>
-<span id="cb33-2"><a href="gwr.html#cb33-2" aria-hidden="true" tabindex="-1"></a>results_fixed <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(model2_fixed<span class="sc">$</span>SDF) <span class="co"># Save coefficients</span></span>
-<span id="cb33-3"><a href="gwr.html#cb33-3" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>fixed_r2 <span class="ot">&lt;-</span> results_fixed<span class="sc">$</span>localR2 <span class="co"># Add local r2 value to data for mapping</span></span>
-<span id="cb33-4"><a href="gwr.html#cb33-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb33-5"><a href="gwr.html#cb33-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
-<span id="cb33-6"><a href="gwr.html#cb33-6" aria-hidden="true" tabindex="-1"></a>map2 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="co"># Call ggplot command</span></span>
-<span id="cb33-7"><a href="gwr.html#cb33-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng, <span class="fu">aes</span>(<span class="at">fill =</span> fixed_r2), <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Define what to plot</span></span>
-<span id="cb33-8"><a href="gwr.html#cb33-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis</span>(<span class="at">limits =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>)) <span class="sc">+</span> <span class="co"># Make colourblind friendly (and set limits to plot for consistency)</span></span>
-<span id="cb33-9"><a href="gwr.html#cb33-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">&quot;Longitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add x-axis label</span></span>
-<span id="cb33-10"><a href="gwr.html#cb33-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">&quot;Latitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add y-axis label</span></span>
-<span id="cb33-11"><a href="gwr.html#cb33-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Local model fit (fixed bandwidth)&quot;</span>, <span class="co"># Edit plot title</span></span>
-<span id="cb33-12"><a href="gwr.html#cb33-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">&quot;R2 value&quot;</span>) <span class="co"># Edit legend title</span></span>
-<span id="cb33-13"><a href="gwr.html#cb33-13" aria-hidden="true" tabindex="-1"></a>map2 <span class="co"># Print plot</span></span></code></pre></div>
-<p><img src="Spatial-Data_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<div class="sourceCode" id="cb131"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb131-1"><a href="gwr.html#cb131-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Tidy data</span></span>
+<span id="cb131-2"><a href="gwr.html#cb131-2" aria-hidden="true" tabindex="-1"></a>results_fixed <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(model2_fixed<span class="sc">$</span>SDF) <span class="co"># Save coefficients</span></span>
+<span id="cb131-3"><a href="gwr.html#cb131-3" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>fixed_r2 <span class="ot">&lt;-</span> results_fixed<span class="sc">$</span>localR2 <span class="co"># Add local r2 value to data for mapping</span></span>
+<span id="cb131-4"><a href="gwr.html#cb131-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb131-5"><a href="gwr.html#cb131-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
+<span id="cb131-6"><a href="gwr.html#cb131-6" aria-hidden="true" tabindex="-1"></a>map2 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="co"># Call ggplot command</span></span>
+<span id="cb131-7"><a href="gwr.html#cb131-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng, <span class="fu">aes</span>(<span class="at">fill =</span> fixed_r2), <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Define what to plot</span></span>
+<span id="cb131-8"><a href="gwr.html#cb131-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis</span>(<span class="at">limits =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>)) <span class="sc">+</span> <span class="co"># Make colourblind friendly (and set limits to plot for consistency)</span></span>
+<span id="cb131-9"><a href="gwr.html#cb131-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">&quot;Longitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add x-axis label</span></span>
+<span id="cb131-10"><a href="gwr.html#cb131-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">&quot;Latitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add y-axis label</span></span>
+<span id="cb131-11"><a href="gwr.html#cb131-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Local model fit (fixed bandwidth)&quot;</span>, <span class="co"># Edit plot title</span></span>
+<span id="cb131-12"><a href="gwr.html#cb131-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">&quot;R2 value&quot;</span>) <span class="co"># Edit legend title</span></span>
+<span id="cb131-13"><a href="gwr.html#cb131-13" aria-hidden="true" tabindex="-1"></a>map2 <span class="co"># Print plot</span></span></code></pre></div>
+<p><img src="Spatial-Data_files/figure-html/unnamed-chunk-71-1.png" width="672" /></p>
 <p>Model fit looks good, but with poorer fit in the North West of England (e.g., Cumbria). Let’s repeat this for the adaptive bandwidth model.</p>
-<div class="sourceCode" id="cb34"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb34-1"><a href="gwr.html#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Tidy data</span></span>
-<span id="cb34-2"><a href="gwr.html#cb34-2" aria-hidden="true" tabindex="-1"></a>results_adapt <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(model2_adapt<span class="sc">$</span>SDF) <span class="co"># Save coefficients</span></span>
-<span id="cb34-3"><a href="gwr.html#cb34-3" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>adapt_r2 <span class="ot">&lt;-</span> results_adapt<span class="sc">$</span>localR2 <span class="co"># Add local r2 value to data for mapping</span></span>
-<span id="cb34-4"><a href="gwr.html#cb34-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb34-5"><a href="gwr.html#cb34-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
-<span id="cb34-6"><a href="gwr.html#cb34-6" aria-hidden="true" tabindex="-1"></a>map3 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="co"># Call ggplot command</span></span>
-<span id="cb34-7"><a href="gwr.html#cb34-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng, <span class="fu">aes</span>(<span class="at">fill =</span> adapt_r2), <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Define what to plot</span></span>
-<span id="cb34-8"><a href="gwr.html#cb34-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis</span>(<span class="at">limits =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>)) <span class="sc">+</span> <span class="co"># Make colourblind friendly (and set limits to plot for consistency)</span></span>
-<span id="cb34-9"><a href="gwr.html#cb34-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">&quot;Longitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add x-axis label</span></span>
-<span id="cb34-10"><a href="gwr.html#cb34-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">&quot;Latitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add y-axis label</span></span>
-<span id="cb34-11"><a href="gwr.html#cb34-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Local model fit (adaptive bandwidth)&quot;</span>, <span class="co"># Edit plot title</span></span>
-<span id="cb34-12"><a href="gwr.html#cb34-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">&quot;R2 value&quot;</span>) <span class="co"># Edit legend title</span></span>
-<span id="cb34-13"><a href="gwr.html#cb34-13" aria-hidden="true" tabindex="-1"></a>map3 <span class="co"># Print plot</span></span></code></pre></div>
-<p><img src="Spatial-Data_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<div class="sourceCode" id="cb132"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb132-1"><a href="gwr.html#cb132-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Tidy data</span></span>
+<span id="cb132-2"><a href="gwr.html#cb132-2" aria-hidden="true" tabindex="-1"></a>results_adapt <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(model2_adapt<span class="sc">$</span>SDF) <span class="co"># Save coefficients</span></span>
+<span id="cb132-3"><a href="gwr.html#cb132-3" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>adapt_r2 <span class="ot">&lt;-</span> results_adapt<span class="sc">$</span>localR2 <span class="co"># Add local r2 value to data for mapping</span></span>
+<span id="cb132-4"><a href="gwr.html#cb132-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb132-5"><a href="gwr.html#cb132-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
+<span id="cb132-6"><a href="gwr.html#cb132-6" aria-hidden="true" tabindex="-1"></a>map3 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="co"># Call ggplot command</span></span>
+<span id="cb132-7"><a href="gwr.html#cb132-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng, <span class="fu">aes</span>(<span class="at">fill =</span> adapt_r2), <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Define what to plot</span></span>
+<span id="cb132-8"><a href="gwr.html#cb132-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis</span>(<span class="at">limits =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>)) <span class="sc">+</span> <span class="co"># Make colourblind friendly (and set limits to plot for consistency)</span></span>
+<span id="cb132-9"><a href="gwr.html#cb132-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">&quot;Longitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add x-axis label</span></span>
+<span id="cb132-10"><a href="gwr.html#cb132-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">&quot;Latitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add y-axis label</span></span>
+<span id="cb132-11"><a href="gwr.html#cb132-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Local model fit (adaptive bandwidth)&quot;</span>, <span class="co"># Edit plot title</span></span>
+<span id="cb132-12"><a href="gwr.html#cb132-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">&quot;R2 value&quot;</span>) <span class="co"># Edit legend title</span></span>
+<span id="cb132-13"><a href="gwr.html#cb132-13" aria-hidden="true" tabindex="-1"></a>map3 <span class="co"># Print plot</span></span></code></pre></div>
+<p><img src="Spatial-Data_files/figure-html/unnamed-chunk-72-1.png" width="672" /></p>
 <p>There is some poorer fit in the Northern England and in Cornwall, but otherwise it looks fairly good.</p>
 <p>In sum, both of the models are very good. For the purposes of this tutorial, we will use the adaptive bandwidth since it generally has better model fit.</p>
 </div>
 <div id="plotting-coefficients" class="section level3" number="4.3.2">
 <h3><span class="header-section-number">4.3.2</span> Plotting coefficients</h3>
 <p>Let’s begin through looking at our overall summary of our analytical model. We can print out the raw output just by running the object in R. I don’t know of a way of cleaning this into a nice and tidy table <del>sorry, not sorry</del>.</p>
-<div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb35-1"><a href="gwr.html#cb35-1" aria-hidden="true" tabindex="-1"></a>model2_fixed</span></code></pre></div>
+<div class="sourceCode" id="cb133"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb133-1"><a href="gwr.html#cb133-1" aria-hidden="true" tabindex="-1"></a>model2_fixed</span></code></pre></div>
 <pre><code>## Call:
 ## gwr(formula = percent_second_dose ~ median_age + Other_White + 
 ##     Mixed + Black + Asian + Other + mean_imd_score + pop_density, 
@@ -439,26 +462,16 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## Kernel function: gwr.Gauss 
 ## Fixed bandwidth: 46.81257 
 ## Summary of GWR coefficient estimates at data points:
-##                       Min.     1st Qu.      Median     3rd Qu.        Max.
-## X.Intercept.   -2.4903e+01 -9.1887e-01  3.0533e+00  7.3111e+00  1.3355e+02
-## median_age     -1.1969e+00  9.7545e-01  1.0405e+00  1.1616e+00  1.6200e+00
-## Other_White    -3.3888e-01 -1.7318e-01 -1.6598e-02  7.1306e-02  7.6619e-01
-## Mixed          -6.5502e-01  1.0532e-02  3.6080e-01  4.9383e-01  4.1734e+00
-## Black          -1.8214e+01 -4.1662e-01 -2.3640e-01 -1.3846e-01 -6.8347e-03
-## Asian          -5.2151e+00 -7.6231e-02 -7.4432e-03  5.8227e-03  6.5581e-02
-## Other          -9.0439e+00 -1.8882e-01 -1.0064e-01  1.1253e-01  3.0705e+00
-## mean_imd_score -7.8441e-01 -5.0281e-02  1.0860e-02  6.3091e-02  2.0162e-01
-## pop_density    -7.9592e-04 -7.3941e-04 -5.5343e-05  2.9945e-04  7.5985e-03
-##                 Global
-## X.Intercept.    4.7973
-## median_age      1.0410
-## Other_White    -0.1071
-## Mixed           0.1229
-## Black          -0.1811
-## Asian          -0.0260
-## Other          -0.1225
-## mean_imd_score  0.0205
-## pop_density    -0.0004
+##                       Min.     1st Qu.      Median     3rd Qu.        Max.  Global
+## X.Intercept.   -2.4903e+01 -9.1887e-01  3.0533e+00  7.3111e+00  1.3355e+02  4.7973
+## median_age     -1.1969e+00  9.7545e-01  1.0405e+00  1.1616e+00  1.6200e+00  1.0410
+## Other_White    -3.3888e-01 -1.7318e-01 -1.6598e-02  7.1306e-02  7.6619e-01 -0.1071
+## Mixed          -6.5502e-01  1.0532e-02  3.6080e-01  4.9383e-01  4.1734e+00  0.1229
+## Black          -1.8214e+01 -4.1662e-01 -2.3640e-01 -1.3846e-01 -6.8347e-03 -0.1811
+## Asian          -5.2151e+00 -7.6231e-02 -7.4432e-03  5.8227e-03  6.5581e-02 -0.0260
+## Other          -9.0439e+00 -1.8882e-01 -1.0064e-01  1.1253e-01  3.0705e+00 -0.1225
+## mean_imd_score -7.8441e-01 -5.0281e-02  1.0860e-02  6.3091e-02  2.0162e-01  0.0205
+## pop_density    -7.9592e-04 -7.3941e-04 -5.5343e-05  2.9945e-04  7.5985e-03 -0.0004
 ## Number of data points: 317 
 ## Effective number of parameters (residual: 2traceS - traceS&#39;S): 94.59721 
 ## Effective degrees of freedom (residual: 2traceS - traceS&#39;S): 222.4028 
@@ -473,64 +486,64 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## Quasi-global R2: 0.9411265</code></pre>
 <p>There is a lot of output and information here. Let’s just focus on the summary of the GWR coefficients, which is typically what would be reported in a report. The table presents summary statistics for the coefficients in the model (each coefficient is a row) across all of the local regressions (in our case, all 317 regression models). We may be interested in the minimum and maximum values to see what the range of values are (which is a useful first step to see if coefficients vary in direction). The global model is the same as OLS coefficients and is a useful point of reference to compare to estimates generated in the GWR model. The 1st Quartile, Median and 3rd Quartile values are also useful for considering the variation in values in terms of direction of association and magnitude of strength.</p>
 <p>The next step will be to visualise the spatial variations in coefficient values. This will allow us to see if there are any distinct geographical patterns in relationships. We will just plot for the variable IMD score (deprivation). First, let’s plot the coefficient values.</p>
-<div class="sourceCode" id="cb37"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb37-1"><a href="gwr.html#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get data</span></span>
-<span id="cb37-2"><a href="gwr.html#cb37-2" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>imd_coef <span class="ot">&lt;-</span> model2_fixed<span class="sc">$</span>SDF<span class="sc">$</span>mean_imd_score <span class="co"># Coefficients</span></span>
-<span id="cb37-3"><a href="gwr.html#cb37-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb37-4"><a href="gwr.html#cb37-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
-<span id="cb37-5"><a href="gwr.html#cb37-5" aria-hidden="true" tabindex="-1"></a>map4 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="co"># Call ggplot command</span></span>
-<span id="cb37-6"><a href="gwr.html#cb37-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng, <span class="fu">aes</span>(<span class="at">fill =</span> imd_coef), <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Define what to plot</span></span>
-<span id="cb37-7"><a href="gwr.html#cb37-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis</span>() <span class="sc">+</span> <span class="co"># Make colourblind friendly</span></span>
-<span id="cb37-8"><a href="gwr.html#cb37-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">&quot;Longitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add x-axis label</span></span>
-<span id="cb37-9"><a href="gwr.html#cb37-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">&quot;Latitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add y-axis label</span></span>
-<span id="cb37-10"><a href="gwr.html#cb37-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Deprivation&quot;</span>, <span class="co"># Edit plot title</span></span>
-<span id="cb37-11"><a href="gwr.html#cb37-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">&quot;Coefficient&quot;</span>) <span class="co"># Edit legend title</span></span>
-<span id="cb37-12"><a href="gwr.html#cb37-12" aria-hidden="true" tabindex="-1"></a>map4 <span class="co"># Print plot</span></span></code></pre></div>
-<p><img src="Spatial-Data_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<div class="sourceCode" id="cb135"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb135-1"><a href="gwr.html#cb135-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get data</span></span>
+<span id="cb135-2"><a href="gwr.html#cb135-2" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>imd_coef <span class="ot">&lt;-</span> model2_fixed<span class="sc">$</span>SDF<span class="sc">$</span>mean_imd_score <span class="co"># Coefficients</span></span>
+<span id="cb135-3"><a href="gwr.html#cb135-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb135-4"><a href="gwr.html#cb135-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
+<span id="cb135-5"><a href="gwr.html#cb135-5" aria-hidden="true" tabindex="-1"></a>map4 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="co"># Call ggplot command</span></span>
+<span id="cb135-6"><a href="gwr.html#cb135-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng, <span class="fu">aes</span>(<span class="at">fill =</span> imd_coef), <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Define what to plot</span></span>
+<span id="cb135-7"><a href="gwr.html#cb135-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis</span>() <span class="sc">+</span> <span class="co"># Make colourblind friendly</span></span>
+<span id="cb135-8"><a href="gwr.html#cb135-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">&quot;Longitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add x-axis label</span></span>
+<span id="cb135-9"><a href="gwr.html#cb135-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">&quot;Latitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add y-axis label</span></span>
+<span id="cb135-10"><a href="gwr.html#cb135-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Deprivation&quot;</span>, <span class="co"># Edit plot title</span></span>
+<span id="cb135-11"><a href="gwr.html#cb135-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">&quot;Coefficient&quot;</span>) <span class="co"># Edit legend title</span></span>
+<span id="cb135-12"><a href="gwr.html#cb135-12" aria-hidden="true" tabindex="-1"></a>map4 <span class="co"># Print plot</span></span></code></pre></div>
+<p><img src="Spatial-Data_files/figure-html/unnamed-chunk-74-1.png" width="672" /></p>
 <p>We may also want to plot the standard errors to look at the variability in the precision of our coefficient estimates.</p>
-<div class="sourceCode" id="cb38"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb38-1"><a href="gwr.html#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get data</span></span>
-<span id="cb38-2"><a href="gwr.html#cb38-2" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>imd_coef_se <span class="ot">&lt;-</span> model2_fixed<span class="sc">$</span>SDF<span class="sc">$</span>mean_imd_score_se <span class="co"># Standard error</span></span>
-<span id="cb38-3"><a href="gwr.html#cb38-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb38-4"><a href="gwr.html#cb38-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
-<span id="cb38-5"><a href="gwr.html#cb38-5" aria-hidden="true" tabindex="-1"></a>map5 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="co"># Call ggplot command</span></span>
-<span id="cb38-6"><a href="gwr.html#cb38-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng, <span class="fu">aes</span>(<span class="at">fill =</span> imd_coef_se), <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Define what to plot</span></span>
-<span id="cb38-7"><a href="gwr.html#cb38-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis</span>() <span class="sc">+</span> <span class="co"># Make colourblind friendly</span></span>
-<span id="cb38-8"><a href="gwr.html#cb38-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">&quot;Longitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add x-axis label</span></span>
-<span id="cb38-9"><a href="gwr.html#cb38-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">&quot;Latitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add y-axis label</span></span>
-<span id="cb38-10"><a href="gwr.html#cb38-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Deprivation&quot;</span>, <span class="co"># Edit plot title</span></span>
-<span id="cb38-11"><a href="gwr.html#cb38-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">&quot;Standard Error&quot;</span>) <span class="co"># Edit legend title</span></span>
-<span id="cb38-12"><a href="gwr.html#cb38-12" aria-hidden="true" tabindex="-1"></a>map5 <span class="co"># Print plot</span></span></code></pre></div>
-<p><img src="Spatial-Data_files/figure-html/unnamed-chunk-13-1.png" width="672" /></p>
+<div class="sourceCode" id="cb136"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb136-1"><a href="gwr.html#cb136-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get data</span></span>
+<span id="cb136-2"><a href="gwr.html#cb136-2" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>imd_coef_se <span class="ot">&lt;-</span> model2_fixed<span class="sc">$</span>SDF<span class="sc">$</span>mean_imd_score_se <span class="co"># Standard error</span></span>
+<span id="cb136-3"><a href="gwr.html#cb136-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb136-4"><a href="gwr.html#cb136-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
+<span id="cb136-5"><a href="gwr.html#cb136-5" aria-hidden="true" tabindex="-1"></a>map5 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="co"># Call ggplot command</span></span>
+<span id="cb136-6"><a href="gwr.html#cb136-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng, <span class="fu">aes</span>(<span class="at">fill =</span> imd_coef_se), <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Define what to plot</span></span>
+<span id="cb136-7"><a href="gwr.html#cb136-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis</span>() <span class="sc">+</span> <span class="co"># Make colourblind friendly</span></span>
+<span id="cb136-8"><a href="gwr.html#cb136-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">&quot;Longitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add x-axis label</span></span>
+<span id="cb136-9"><a href="gwr.html#cb136-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">&quot;Latitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add y-axis label</span></span>
+<span id="cb136-10"><a href="gwr.html#cb136-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Deprivation&quot;</span>, <span class="co"># Edit plot title</span></span>
+<span id="cb136-11"><a href="gwr.html#cb136-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">&quot;Standard Error&quot;</span>) <span class="co"># Edit legend title</span></span>
+<span id="cb136-12"><a href="gwr.html#cb136-12" aria-hidden="true" tabindex="-1"></a>map5 <span class="co"># Print plot</span></span></code></pre></div>
+<p><img src="Spatial-Data_files/figure-html/unnamed-chunk-75-1.png" width="672" /></p>
 <p>The next step would be to assess the statistical significance of the coefficients to identify if any associations were meaningful. To do this, we estimate the t-value and then categorise observations if they meet 95% level of significance. Let’s plot areas based on whether they meet the criterion.</p>
-<div class="sourceCode" id="cb39"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb39-1"><a href="gwr.html#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate t statistic</span></span>
-<span id="cb39-2"><a href="gwr.html#cb39-2" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>t_imd_coef <span class="ot">=</span> results_fixed<span class="sc">$</span>mean_imd_score <span class="sc">/</span> results_fixed<span class="sc">$</span>mean_imd_score_se</span>
-<span id="cb39-3"><a href="gwr.html#cb39-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb39-4"><a href="gwr.html#cb39-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Categorise t values as significant or not</span></span>
-<span id="cb39-5"><a href="gwr.html#cb39-5" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>t_imd_coef_cat <span class="ot">&lt;-</span> <span class="fu">cut</span>(lad_eng<span class="sc">$</span>t_imd_coef,</span>
-<span id="cb39-6"><a href="gwr.html#cb39-6" aria-hidden="true" tabindex="-1"></a>                     <span class="at">breaks=</span><span class="fu">c</span>(<span class="fu">min</span>(lad_eng<span class="sc">$</span>t_imd_coef), <span class="sc">-</span><span class="dv">2</span>, <span class="dv">2</span>, <span class="fu">max</span>(lad_eng<span class="sc">$</span>t_imd_coef)),</span>
-<span id="cb39-7"><a href="gwr.html#cb39-7" aria-hidden="true" tabindex="-1"></a>                     <span class="at">labels=</span><span class="fu">c</span>(<span class="st">&quot;Sig.&quot;</span>,<span class="st">&quot;Non-sig.&quot;</span>, <span class="st">&quot;Sig.&quot;</span>))</span>
-<span id="cb39-8"><a href="gwr.html#cb39-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb39-9"><a href="gwr.html#cb39-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
-<span id="cb39-10"><a href="gwr.html#cb39-10" aria-hidden="true" tabindex="-1"></a>map6 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="co"># Call ggplot command</span></span>
-<span id="cb39-11"><a href="gwr.html#cb39-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng, <span class="fu">aes</span>(<span class="at">fill =</span> t_imd_coef_cat), <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Define what to plot</span></span>
-<span id="cb39-12"><a href="gwr.html#cb39-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis_d</span>() <span class="sc">+</span> <span class="co"># Make colourblind friendly</span></span>
-<span id="cb39-13"><a href="gwr.html#cb39-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">&quot;Longitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add x-axis label</span></span>
-<span id="cb39-14"><a href="gwr.html#cb39-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">&quot;Latitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add y-axis label</span></span>
-<span id="cb39-15"><a href="gwr.html#cb39-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Deprivation&quot;</span>, <span class="co"># Edit plot title</span></span>
-<span id="cb39-16"><a href="gwr.html#cb39-16" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">&quot;Statistical significance&quot;</span>) <span class="co"># Edit legend title</span></span>
-<span id="cb39-17"><a href="gwr.html#cb39-17" aria-hidden="true" tabindex="-1"></a>map6 <span class="co"># Print plot</span></span></code></pre></div>
-<p><img src="Spatial-Data_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
+<div class="sourceCode" id="cb137"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb137-1"><a href="gwr.html#cb137-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate t statistic</span></span>
+<span id="cb137-2"><a href="gwr.html#cb137-2" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>t_imd_coef <span class="ot">=</span> results_fixed<span class="sc">$</span>mean_imd_score <span class="sc">/</span> results_fixed<span class="sc">$</span>mean_imd_score_se</span>
+<span id="cb137-3"><a href="gwr.html#cb137-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb137-4"><a href="gwr.html#cb137-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Categorise t values as significant or not</span></span>
+<span id="cb137-5"><a href="gwr.html#cb137-5" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>t_imd_coef_cat <span class="ot">&lt;-</span> <span class="fu">cut</span>(lad_eng<span class="sc">$</span>t_imd_coef,</span>
+<span id="cb137-6"><a href="gwr.html#cb137-6" aria-hidden="true" tabindex="-1"></a>                     <span class="at">breaks=</span><span class="fu">c</span>(<span class="fu">min</span>(lad_eng<span class="sc">$</span>t_imd_coef), <span class="sc">-</span><span class="dv">2</span>, <span class="dv">2</span>, <span class="fu">max</span>(lad_eng<span class="sc">$</span>t_imd_coef)),</span>
+<span id="cb137-7"><a href="gwr.html#cb137-7" aria-hidden="true" tabindex="-1"></a>                     <span class="at">labels=</span><span class="fu">c</span>(<span class="st">&quot;Sig.&quot;</span>,<span class="st">&quot;Non-sig.&quot;</span>, <span class="st">&quot;Sig.&quot;</span>))</span>
+<span id="cb137-8"><a href="gwr.html#cb137-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb137-9"><a href="gwr.html#cb137-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
+<span id="cb137-10"><a href="gwr.html#cb137-10" aria-hidden="true" tabindex="-1"></a>map6 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="co"># Call ggplot command</span></span>
+<span id="cb137-11"><a href="gwr.html#cb137-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng, <span class="fu">aes</span>(<span class="at">fill =</span> t_imd_coef_cat), <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Define what to plot</span></span>
+<span id="cb137-12"><a href="gwr.html#cb137-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis_d</span>() <span class="sc">+</span> <span class="co"># Make colourblind friendly</span></span>
+<span id="cb137-13"><a href="gwr.html#cb137-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">&quot;Longitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add x-axis label</span></span>
+<span id="cb137-14"><a href="gwr.html#cb137-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">&quot;Latitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add y-axis label</span></span>
+<span id="cb137-15"><a href="gwr.html#cb137-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Deprivation&quot;</span>, <span class="co"># Edit plot title</span></span>
+<span id="cb137-16"><a href="gwr.html#cb137-16" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">&quot;Statistical significance&quot;</span>) <span class="co"># Edit legend title</span></span>
+<span id="cb137-17"><a href="gwr.html#cb137-17" aria-hidden="true" tabindex="-1"></a>map6 <span class="co"># Print plot</span></span></code></pre></div>
+<p><img src="Spatial-Data_files/figure-html/unnamed-chunk-76-1.png" width="672" /></p>
 <p>It may be useful to combine the coefficient and statistical significance plots into one single visualisation. You could do this by joining the two plots together side-by-side using a R package like <code>patchwork</code>. Rather, we will only plot significant associations and hide those which are not.</p>
-<div class="sourceCode" id="cb40"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb40-1"><a href="gwr.html#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
-<span id="cb40-2"><a href="gwr.html#cb40-2" aria-hidden="true" tabindex="-1"></a>map7 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="co"># Call ggplot command</span></span>
-<span id="cb40-3"><a href="gwr.html#cb40-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng, <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Plot all areas as base layer</span></span>
-<span id="cb40-4"><a href="gwr.html#cb40-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng[lad_eng<span class="sc">$</span>t_imd_coef_cat <span class="sc">==</span> <span class="st">&quot;Sig.&quot;</span>,], <span class="fu">aes</span>(<span class="at">fill =</span> imd_coef), <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Plot the coefficients that are significant</span></span>
-<span id="cb40-5"><a href="gwr.html#cb40-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_fill_viridis</span>() <span class="sc">+</span> <span class="co"># Make colourblind friendly</span></span>
-<span id="cb40-6"><a href="gwr.html#cb40-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">xlab</span>(<span class="st">&quot;Longitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add x-axis label</span></span>
-<span id="cb40-7"><a href="gwr.html#cb40-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ylab</span>(<span class="st">&quot;Latitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add y-axis label</span></span>
-<span id="cb40-8"><a href="gwr.html#cb40-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Deprivation&quot;</span>, <span class="co"># Edit plot title</span></span>
-<span id="cb40-9"><a href="gwr.html#cb40-9" aria-hidden="true" tabindex="-1"></a>         <span class="at">fill =</span> <span class="st">&quot;Coefficient&quot;</span>) <span class="co"># Edit legend title</span></span>
-<span id="cb40-10"><a href="gwr.html#cb40-10" aria-hidden="true" tabindex="-1"></a>map7 <span class="co"># Print plot</span></span></code></pre></div>
-<p><img src="Spatial-Data_files/figure-html/unnamed-chunk-15-1.png" width="672" /></p>
+<div class="sourceCode" id="cb138"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb138-1"><a href="gwr.html#cb138-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
+<span id="cb138-2"><a href="gwr.html#cb138-2" aria-hidden="true" tabindex="-1"></a>map7 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="co"># Call ggplot command</span></span>
+<span id="cb138-3"><a href="gwr.html#cb138-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng, <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Plot all areas as base layer</span></span>
+<span id="cb138-4"><a href="gwr.html#cb138-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng[lad_eng<span class="sc">$</span>t_imd_coef_cat <span class="sc">==</span> <span class="st">&quot;Sig.&quot;</span>,], <span class="fu">aes</span>(<span class="at">fill =</span> imd_coef), <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Plot the coefficients that are significant</span></span>
+<span id="cb138-5"><a href="gwr.html#cb138-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_fill_viridis</span>() <span class="sc">+</span> <span class="co"># Make colourblind friendly</span></span>
+<span id="cb138-6"><a href="gwr.html#cb138-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">xlab</span>(<span class="st">&quot;Longitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add x-axis label</span></span>
+<span id="cb138-7"><a href="gwr.html#cb138-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ylab</span>(<span class="st">&quot;Latitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add y-axis label</span></span>
+<span id="cb138-8"><a href="gwr.html#cb138-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Deprivation&quot;</span>, <span class="co"># Edit plot title</span></span>
+<span id="cb138-9"><a href="gwr.html#cb138-9" aria-hidden="true" tabindex="-1"></a>         <span class="at">fill =</span> <span class="st">&quot;Coefficient&quot;</span>) <span class="co"># Edit legend title</span></span>
+<span id="cb138-10"><a href="gwr.html#cb138-10" aria-hidden="true" tabindex="-1"></a>map7 <span class="co"># Print plot</span></span></code></pre></div>
+<p><img src="Spatial-Data_files/figure-html/unnamed-chunk-77-1.png" width="672" /></p>
 <p>Why not have a look at other coefficients now - what can you find out? What interesting spatial patterns are there?</p>
 </div>
 </div>
@@ -543,16 +556,16 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li><code>nsamp</code> - Number of random samples for (aproximate) cross-validation: should be smaller than sample size, but larger is better for minimising errors due to random sampling.</li>
 </ul>
 <p>Let’s re-run the model again, but using the <code>scgwr</code> package. Unfortunately, this code does not work with our example so I leave it in here to show the option for you in case you ever need it. If you can fix it, please send in your answers on a postcode.</p>
-<div class="sourceCode" id="cb41"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb41-1"><a href="gwr.html#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="co"># # Library</span></span>
-<span id="cb41-2"><a href="gwr.html#cb41-2" aria-hidden="true" tabindex="-1"></a><span class="co"># library(scgwr)</span></span>
-<span id="cb41-3"><a href="gwr.html#cb41-3" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
-<span id="cb41-4"><a href="gwr.html#cb41-4" aria-hidden="true" tabindex="-1"></a><span class="co"># # Tidy data</span></span>
-<span id="cb41-5"><a href="gwr.html#cb41-5" aria-hidden="true" tabindex="-1"></a><span class="co"># outcome &lt;- lad_eng[, &quot;percent_second_dose&quot;] # Store outcome variable (if don&#39;t define as object then stores as list)</span></span>
-<span id="cb41-6"><a href="gwr.html#cb41-6" aria-hidden="true" tabindex="-1"></a><span class="co"># xvars &lt;- lad_eng[, c(&quot;median_age&quot;, &quot;Other_White&quot;, &quot;Mixed&quot;, &quot;Black&quot;, &quot;Asian&quot;, &quot;Other&quot;, &quot;mean_imd_score&quot;, &quot;pop_density&quot;)] # Store explanatory variables</span></span>
-<span id="cb41-7"><a href="gwr.html#cb41-7" aria-hidden="true" tabindex="-1"></a><span class="co"># xy &lt;- lad_eng[, c(&quot;long&quot;, &quot;lat&quot;)] # Store co-ordinates</span></span>
-<span id="cb41-8"><a href="gwr.html#cb41-8" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
-<span id="cb41-9"><a href="gwr.html#cb41-9" aria-hidden="true" tabindex="-1"></a><span class="co"># # Model</span></span>
-<span id="cb41-10"><a href="gwr.html#cb41-10" aria-hidden="true" tabindex="-1"></a><span class="co"># model3 &lt;- scgwr(y = outcome, x = xvars, coords = xy, knn = 100, kernel = &quot;gau&quot;, p = 4, approach = &quot;CV&quot;) # Model using cross-validation approach (&quot;CV&quot;) and Gaussian kernel (&quot;gau&quot;)</span></span></code></pre></div>
+<div class="sourceCode" id="cb139"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb139-1"><a href="gwr.html#cb139-1" aria-hidden="true" tabindex="-1"></a><span class="co"># # Library</span></span>
+<span id="cb139-2"><a href="gwr.html#cb139-2" aria-hidden="true" tabindex="-1"></a><span class="co"># library(scgwr)</span></span>
+<span id="cb139-3"><a href="gwr.html#cb139-3" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
+<span id="cb139-4"><a href="gwr.html#cb139-4" aria-hidden="true" tabindex="-1"></a><span class="co"># # Tidy data</span></span>
+<span id="cb139-5"><a href="gwr.html#cb139-5" aria-hidden="true" tabindex="-1"></a><span class="co"># outcome &lt;- lad_eng[, &quot;percent_second_dose&quot;] # Store outcome variable (if don&#39;t define as object then stores as list)</span></span>
+<span id="cb139-6"><a href="gwr.html#cb139-6" aria-hidden="true" tabindex="-1"></a><span class="co"># xvars &lt;- lad_eng[, c(&quot;median_age&quot;, &quot;Other_White&quot;, &quot;Mixed&quot;, &quot;Black&quot;, &quot;Asian&quot;, &quot;Other&quot;, &quot;mean_imd_score&quot;, &quot;pop_density&quot;)] # Store explanatory variables</span></span>
+<span id="cb139-7"><a href="gwr.html#cb139-7" aria-hidden="true" tabindex="-1"></a><span class="co"># xy &lt;- lad_eng[, c(&quot;long&quot;, &quot;lat&quot;)] # Store co-ordinates</span></span>
+<span id="cb139-8"><a href="gwr.html#cb139-8" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
+<span id="cb139-9"><a href="gwr.html#cb139-9" aria-hidden="true" tabindex="-1"></a><span class="co"># # Model</span></span>
+<span id="cb139-10"><a href="gwr.html#cb139-10" aria-hidden="true" tabindex="-1"></a><span class="co"># model3 &lt;- scgwr(y = outcome, x = xvars, coords = xy, knn = 100, kernel = &quot;gau&quot;, p = 4, approach = &quot;CV&quot;) # Model using cross-validation approach (&quot;CV&quot;) and Gaussian kernel (&quot;gau&quot;)</span></span></code></pre></div>
 <p>The R package can incorporate parallel processing for faster processing as well using the <code>scgwr_p</code> command.</p>
 </div>
 <div id="summary-3" class="section level2" number="4.5">
@@ -618,6 +631,20 @@ gitbook.start({
 });
 </script>
 
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:")
+      if (/^https?:/.test(src))
+        src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
 </body>
 
 </html>

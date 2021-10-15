@@ -24,7 +24,7 @@
 <meta name="author" content="Mark Green" />
 
 
-<meta name="date" content="2021-10-07" />
+<meta name="date" content="2021-10-15" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -53,6 +53,16 @@
 
 <link href="libs/anchor-sections-1.0.1/anchor-sections.css" rel="stylesheet" />
 <script src="libs/anchor-sections-1.0.1/anchor-sections.js"></script>
+<script src="libs/htmlwidgets-1.5.1/htmlwidgets.js"></script>
+<link href="libs/leaflet-1.3.1/leaflet.css" rel="stylesheet" />
+<script src="libs/leaflet-1.3.1/leaflet.js"></script>
+<link href="libs/leafletfix-1.0.0/leafletfix.css" rel="stylesheet" />
+<script src="libs/Proj4Leaflet-1.0.1/proj4-compressed.js"></script>
+<script src="libs/Proj4Leaflet-1.0.1/proj4leaflet.js"></script>
+<link href="libs/rstudio_leaflet-1.3.1/rstudio_leaflet.css" rel="stylesheet" />
+<script src="libs/leaflet-binding-2.0.3/leaflet.js"></script>
+<script src="libs/leaflet-providers-1.9.0/leaflet-providers_1.9.0.js"></script>
+<script src="libs/leaflet-providers-plugin-2.0.3/leaflet-providers-plugin.js"></script>
 
 
 <style type="text/css">
@@ -119,6 +129,28 @@ code span.vs { color: #4070a0; } /* VerbatimString */
 code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
 </style>
 
+<style type="text/css">
+/* Used with Pandoc 2.11+ new --citeproc when CSL is used */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}
+</style>
 
 <link rel="stylesheet" href="style.css" type="text/css" />
 </head>
@@ -241,37 +273,37 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li><strong>Deprivation</strong> was measured using the Index of Multiple Deprivation score (2019). The composite index is the most commonly used measure of deprivation used by researchers and policy officials. We include deprivation in our analyses as we hypothesise that uptake will be lower in more deprived areas. The data are openly available <a href="https://www.gov.uk/government/statistics/english-indices-of-deprivation-2019">here</a>.</li>
 </ul>
 <p>Let’s load the data into R and tidy it up.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="spatreg.html#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load package</span></span>
-<span id="cb1-2"><a href="spatreg.html#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sf)</span>
-<span id="cb1-3"><a href="spatreg.html#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="spatreg.html#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Load and clean spatial data</span></span>
-<span id="cb1-5"><a href="spatreg.html#cb1-5" aria-hidden="true" tabindex="-1"></a>lad_uk <span class="ot">&lt;-</span> <span class="fu">read_sf</span>(<span class="st">&quot;./Shapefiles/UK_LAD/Local_Authority_Districts_(December_2019)_Boundaries_UK_BFC.shp&quot;</span>) <span class="co"># Load shapefile for Local Authority Districts (LADs) for UK (sorry but could not find only England version so need to convert to match data)</span></span>
-<span id="cb1-6"><a href="spatreg.html#cb1-6" aria-hidden="true" tabindex="-1"></a>lad_uk<span class="sc">$</span>country <span class="ot">&lt;-</span> <span class="fu">substr</span>(lad_uk<span class="sc">$</span>lad19cd, <span class="dv">0</span>, <span class="dv">1</span>) <span class="co"># Record first letter of LAD code (denotes country)</span></span>
-<span id="cb1-7"><a href="spatreg.html#cb1-7" aria-hidden="true" tabindex="-1"></a>lad_eng <span class="ot">&lt;-</span> lad_uk[lad_uk<span class="sc">$</span>country <span class="sc">==</span> <span class="st">&quot;E&quot;</span>,] <span class="co"># Subset only English LADs</span></span>
-<span id="cb1-8"><a href="spatreg.html#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-9"><a href="spatreg.html#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Tidy and join on explanatory variables</span></span>
-<span id="cb1-10"><a href="spatreg.html#cb1-10" aria-hidden="true" tabindex="-1"></a>lad_data <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">&quot;./Data/LAD_vaccine_data.csv&quot;</span>) <span class="co"># Load vaccine uptake and demographic data for England</span></span>
-<span id="cb1-11"><a href="spatreg.html#cb1-11" aria-hidden="true" tabindex="-1"></a>lad_eng <span class="ot">&lt;-</span> <span class="fu">merge</span>(lad_eng, lad_data, <span class="at">by.x =</span> <span class="st">&quot;lad19cd&quot;</span>, <span class="at">by.y =</span> <span class="st">&quot;ltla_code&quot;</span>, <span class="at">all.x =</span> <span class="cn">TRUE</span>) <span class="co"># Join on both datasets</span></span>
-<span id="cb1-12"><a href="spatreg.html#cb1-12" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>pop_density <span class="ot">&lt;-</span> lad_eng<span class="sc">$</span>population <span class="sc">/</span> (lad_eng<span class="sc">$</span>st_areasha <span class="sc">/</span> <span class="dv">1000000</span>) <span class="co"># Calculate population density (st_areashape is measured in metres^2 so need to convert to km^2 by dividing by 1,000,000)</span></span>
-<span id="cb1-13"><a href="spatreg.html#cb1-13" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>percent_first_dose <span class="ot">&lt;-</span> (lad_eng<span class="sc">$</span>total_first_dose <span class="sc">/</span> lad_eng<span class="sc">$</span>population) <span class="sc">*</span> <span class="dv">100</span> <span class="co"># Calculate outcome variable</span></span>
-<span id="cb1-14"><a href="spatreg.html#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-15"><a href="spatreg.html#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove objects to save space</span></span>
-<span id="cb1-16"><a href="spatreg.html#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(lad_uk, lad_data) </span></code></pre></div>
+<div class="sourceCode" id="cb65"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb65-1"><a href="spatreg.html#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load package</span></span>
+<span id="cb65-2"><a href="spatreg.html#cb65-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sf)</span>
+<span id="cb65-3"><a href="spatreg.html#cb65-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-4"><a href="spatreg.html#cb65-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Load and clean spatial data</span></span>
+<span id="cb65-5"><a href="spatreg.html#cb65-5" aria-hidden="true" tabindex="-1"></a>lad_uk <span class="ot">&lt;-</span> <span class="fu">read_sf</span>(<span class="st">&quot;./Shapefiles/UK_LAD/Local_Authority_Districts_(December_2019)_Boundaries_UK_BFC.shp&quot;</span>) <span class="co"># Load shapefile for Local Authority Districts (LADs) for UK (sorry but could not find only England version so need to convert to match data)</span></span>
+<span id="cb65-6"><a href="spatreg.html#cb65-6" aria-hidden="true" tabindex="-1"></a>lad_uk<span class="sc">$</span>country <span class="ot">&lt;-</span> <span class="fu">substr</span>(lad_uk<span class="sc">$</span>lad19cd, <span class="dv">0</span>, <span class="dv">1</span>) <span class="co"># Record first letter of LAD code (denotes country)</span></span>
+<span id="cb65-7"><a href="spatreg.html#cb65-7" aria-hidden="true" tabindex="-1"></a>lad_eng <span class="ot">&lt;-</span> lad_uk[lad_uk<span class="sc">$</span>country <span class="sc">==</span> <span class="st">&quot;E&quot;</span>,] <span class="co"># Subset only English LADs</span></span>
+<span id="cb65-8"><a href="spatreg.html#cb65-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-9"><a href="spatreg.html#cb65-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Tidy and join on explanatory variables</span></span>
+<span id="cb65-10"><a href="spatreg.html#cb65-10" aria-hidden="true" tabindex="-1"></a>lad_data <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">&quot;./Data/LAD_vaccine_data.csv&quot;</span>) <span class="co"># Load vaccine uptake and demographic data for England</span></span>
+<span id="cb65-11"><a href="spatreg.html#cb65-11" aria-hidden="true" tabindex="-1"></a>lad_eng <span class="ot">&lt;-</span> <span class="fu">merge</span>(lad_eng, lad_data, <span class="at">by.x =</span> <span class="st">&quot;lad19cd&quot;</span>, <span class="at">by.y =</span> <span class="st">&quot;ltla_code&quot;</span>, <span class="at">all.x =</span> <span class="cn">TRUE</span>) <span class="co"># Join on both datasets</span></span>
+<span id="cb65-12"><a href="spatreg.html#cb65-12" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>pop_density <span class="ot">&lt;-</span> lad_eng<span class="sc">$</span>population <span class="sc">/</span> (lad_eng<span class="sc">$</span>st_areasha <span class="sc">/</span> <span class="dv">1000000</span>) <span class="co"># Calculate population density (st_areashape is measured in metres^2 so need to convert to km^2 by dividing by 1,000,000)</span></span>
+<span id="cb65-13"><a href="spatreg.html#cb65-13" aria-hidden="true" tabindex="-1"></a>lad_eng<span class="sc">$</span>percent_first_dose <span class="ot">&lt;-</span> (lad_eng<span class="sc">$</span>total_first_dose <span class="sc">/</span> lad_eng<span class="sc">$</span>population) <span class="sc">*</span> <span class="dv">100</span> <span class="co"># Calculate outcome variable</span></span>
+<span id="cb65-14"><a href="spatreg.html#cb65-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-15"><a href="spatreg.html#cb65-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove objects to save space</span></span>
+<span id="cb65-16"><a href="spatreg.html#cb65-16" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(lad_uk, lad_data) </span></code></pre></div>
 <p>The first step is to visualise our outcome variable and examine if there are any spatial patterns. Ideally we would age-standardise our outcome since older age groups were allowed to be vaccinated at early dates, but for simplicity we will stick with the raw percentage of uptake <del>don’t have a go at my laziness</del>.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="spatreg.html#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load packages</span></span>
-<span id="cb2-2"><a href="spatreg.html#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2) </span>
-<span id="cb2-3"><a href="spatreg.html#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(viridis)</span>
-<span id="cb2-4"><a href="spatreg.html#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-5"><a href="spatreg.html#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
-<span id="cb2-6"><a href="spatreg.html#cb2-6" aria-hidden="true" tabindex="-1"></a>map1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="co"># Call ggplot command</span></span>
-<span id="cb2-7"><a href="spatreg.html#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng, <span class="fu">aes</span>(<span class="at">fill =</span> percent_first_dose), <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Define what to plot</span></span>
-<span id="cb2-8"><a href="spatreg.html#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis</span>() <span class="sc">+</span> <span class="co"># Make colourblind friendly</span></span>
-<span id="cb2-9"><a href="spatreg.html#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">&quot;Longitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add x-axis label</span></span>
-<span id="cb2-10"><a href="spatreg.html#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">&quot;Latitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add y-axis label</span></span>
-<span id="cb2-11"><a href="spatreg.html#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;First dose uptake&quot;</span>, <span class="co"># Edit plot title</span></span>
-<span id="cb2-12"><a href="spatreg.html#cb2-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">&quot;Percent (%)&quot;</span>) <span class="co"># Edit legend title</span></span>
-<span id="cb2-13"><a href="spatreg.html#cb2-13" aria-hidden="true" tabindex="-1"></a>map1 <span class="co"># Print plot</span></span></code></pre></div>
-<p><img src="Spatial-Data_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<div class="sourceCode" id="cb66"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb66-1"><a href="spatreg.html#cb66-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load packages</span></span>
+<span id="cb66-2"><a href="spatreg.html#cb66-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2) </span>
+<span id="cb66-3"><a href="spatreg.html#cb66-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(viridis)</span>
+<span id="cb66-4"><a href="spatreg.html#cb66-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb66-5"><a href="spatreg.html#cb66-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
+<span id="cb66-6"><a href="spatreg.html#cb66-6" aria-hidden="true" tabindex="-1"></a>map1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="co"># Call ggplot command</span></span>
+<span id="cb66-7"><a href="spatreg.html#cb66-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng, <span class="fu">aes</span>(<span class="at">fill =</span> percent_first_dose), <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Define what to plot</span></span>
+<span id="cb66-8"><a href="spatreg.html#cb66-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis</span>() <span class="sc">+</span> <span class="co"># Make colourblind friendly</span></span>
+<span id="cb66-9"><a href="spatreg.html#cb66-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">&quot;Longitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add x-axis label</span></span>
+<span id="cb66-10"><a href="spatreg.html#cb66-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">&quot;Latitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add y-axis label</span></span>
+<span id="cb66-11"><a href="spatreg.html#cb66-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;First dose uptake&quot;</span>, <span class="co"># Edit plot title</span></span>
+<span id="cb66-12"><a href="spatreg.html#cb66-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">&quot;Percent (%)&quot;</span>) <span class="co"># Edit legend title</span></span>
+<span id="cb66-13"><a href="spatreg.html#cb66-13" aria-hidden="true" tabindex="-1"></a>map1 <span class="co"># Print plot</span></span></code></pre></div>
+<p><img src="Spatial-Data_files/figure-html/unnamed-chunk-41-1.png" width="672" /></p>
 <p>What are the main spatial patterns that you can observe? There is lower uptake in urban areas, especially London, although many of these areas are small on the map due taking up smaller land mass. Else, there is probably not any other distinct spatial pattern.</p>
 </div>
 <div id="non-spatial-regression" class="section level2" number="3.2">
@@ -281,8 +313,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 y = X\beta + \epsilon
 \]</span></p>
 <p>Here, we predict <span class="math inline">\(y\)</span> as a function of a series of predictor <span class="math inline">\(X\)</span> variables that we adjust their effects based on <span class="math inline">\(\beta\)</span> values and some measure of the error <span class="math inline">\(\epsilon\)</span>. We can use an OLS regression model to help us explain patterns in uptake, based on our explanatory variables.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="spatreg.html#cb3-1" aria-hidden="true" tabindex="-1"></a>model1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(percent_first_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng) <span class="co"># Fit a linear regression model for the following equation (outcome ~ explanatory)</span></span>
-<span id="cb3-2"><a href="spatreg.html#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model1) <span class="co"># Print model results summary</span></span></code></pre></div>
+<div class="sourceCode" id="cb67"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb67-1"><a href="spatreg.html#cb67-1" aria-hidden="true" tabindex="-1"></a>model1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(percent_first_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng) <span class="co"># Fit a linear regression model for the following equation (outcome ~ explanatory)</span></span>
+<span id="cb67-2"><a href="spatreg.html#cb67-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model1) <span class="co"># Print model results summary</span></span></code></pre></div>
 <pre><code>## 
 ## Call:
 ## lm(formula = percent_first_dose ~ median_age + Other_White + 
@@ -311,15 +343,15 @@ y = X\beta + \epsilon
 ## Multiple R-squared:  0.8612, Adjusted R-squared:  0.8576 
 ## F-statistic: 238.9 on 8 and 308 DF,  p-value: &lt; 2.2e-16</code></pre>
 <p>Urgh, what ugly output. I mean it is functional, but not pretty. Good thing we can make the output nicer using various packages in R. I really like <code>gtsummary</code> which can clean regression tables up.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="spatreg.html#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gtsummary) <span class="co"># Load package</span></span>
-<span id="cb5-2"><a href="spatreg.html#cb5-2" aria-hidden="true" tabindex="-1"></a>tbl_model1 <span class="ot">&lt;-</span> <span class="fu">tbl_regression</span>(model1, <span class="at">label =</span> <span class="fu">list</span>(median_age <span class="sc">~</span> <span class="st">&quot;Median age&quot;</span>, Other_White <span class="sc">~</span> <span class="st">&quot;Other White (%)&quot;</span>, Mixed <span class="sc">~</span> <span class="st">&quot;Mixed (%)&quot;</span>, Black <span class="sc">~</span> <span class="st">&quot;Black (%)&quot;</span>, Asian <span class="sc">~</span> <span class="st">&quot;Asian (%)&quot;</span>, Other <span class="sc">~</span> <span class="st">&quot;Other Ethnicity (%)&quot;</span>, mean_imd_score <span class="sc">~</span> <span class="st">&quot;Deprivation score&quot;</span>, pop_density <span class="sc">~</span> <span class="st">&quot;Population density&quot;</span>)) <span class="co"># Make tidy table</span></span>
-<span id="cb5-3"><a href="spatreg.html#cb5-3" aria-hidden="true" tabindex="-1"></a>tbl_model1 <span class="co"># Print</span></span></code></pre></div>
-<div id="upqlcuvcgh" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div class="sourceCode" id="cb69"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb69-1"><a href="spatreg.html#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gtsummary) <span class="co"># Load package</span></span>
+<span id="cb69-2"><a href="spatreg.html#cb69-2" aria-hidden="true" tabindex="-1"></a>tbl_model1 <span class="ot">&lt;-</span> <span class="fu">tbl_regression</span>(model1, <span class="at">label =</span> <span class="fu">list</span>(median_age <span class="sc">~</span> <span class="st">&quot;Median age&quot;</span>, Other_White <span class="sc">~</span> <span class="st">&quot;Other White (%)&quot;</span>, Mixed <span class="sc">~</span> <span class="st">&quot;Mixed (%)&quot;</span>, Black <span class="sc">~</span> <span class="st">&quot;Black (%)&quot;</span>, Asian <span class="sc">~</span> <span class="st">&quot;Asian (%)&quot;</span>, Other <span class="sc">~</span> <span class="st">&quot;Other Ethnicity (%)&quot;</span>, mean_imd_score <span class="sc">~</span> <span class="st">&quot;Deprivation score&quot;</span>, pop_density <span class="sc">~</span> <span class="st">&quot;Population density&quot;</span>)) <span class="co"># Make tidy table</span></span>
+<span id="cb69-3"><a href="spatreg.html#cb69-3" aria-hidden="true" tabindex="-1"></a>tbl_model1 <span class="co"># Print</span></span></code></pre></div>
+<div id="gsmlykpuhb" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
 
-#upqlcuvcgh .gt_table {
+#gsmlykpuhb .gt_table {
   display: table;
   border-collapse: collapse;
   margin-left: auto;
@@ -344,7 +376,7 @@ y = X\beta + \epsilon
   border-left-color: #D3D3D3;
 }
 
-#upqlcuvcgh .gt_heading {
+#gsmlykpuhb .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -356,7 +388,7 @@ y = X\beta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#upqlcuvcgh .gt_title {
+#gsmlykpuhb .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -366,7 +398,7 @@ y = X\beta + \epsilon
   border-bottom-width: 0;
 }
 
-#upqlcuvcgh .gt_subtitle {
+#gsmlykpuhb .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -376,13 +408,13 @@ y = X\beta + \epsilon
   border-top-width: 0;
 }
 
-#upqlcuvcgh .gt_bottom_border {
+#gsmlykpuhb .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#upqlcuvcgh .gt_col_headings {
+#gsmlykpuhb .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -397,7 +429,7 @@ y = X\beta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#upqlcuvcgh .gt_col_heading {
+#gsmlykpuhb .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -417,7 +449,7 @@ y = X\beta + \epsilon
   overflow-x: hidden;
 }
 
-#upqlcuvcgh .gt_column_spanner_outer {
+#gsmlykpuhb .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -429,15 +461,15 @@ y = X\beta + \epsilon
   padding-right: 4px;
 }
 
-#upqlcuvcgh .gt_column_spanner_outer:first-child {
+#gsmlykpuhb .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#upqlcuvcgh .gt_column_spanner_outer:last-child {
+#gsmlykpuhb .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#upqlcuvcgh .gt_column_spanner {
+#gsmlykpuhb .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -449,7 +481,7 @@ y = X\beta + \epsilon
   width: 100%;
 }
 
-#upqlcuvcgh .gt_group_heading {
+#gsmlykpuhb .gt_group_heading {
   padding: 8px;
   color: #333333;
   background-color: #FFFFFF;
@@ -471,7 +503,7 @@ y = X\beta + \epsilon
   vertical-align: middle;
 }
 
-#upqlcuvcgh .gt_empty_group_heading {
+#gsmlykpuhb .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -486,15 +518,15 @@ y = X\beta + \epsilon
   vertical-align: middle;
 }
 
-#upqlcuvcgh .gt_from_md > :first-child {
+#gsmlykpuhb .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#upqlcuvcgh .gt_from_md > :last-child {
+#gsmlykpuhb .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#upqlcuvcgh .gt_row {
+#gsmlykpuhb .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -513,7 +545,7 @@ y = X\beta + \epsilon
   overflow-x: hidden;
 }
 
-#upqlcuvcgh .gt_stub {
+#gsmlykpuhb .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -525,7 +557,7 @@ y = X\beta + \epsilon
   padding-left: 12px;
 }
 
-#upqlcuvcgh .gt_summary_row {
+#gsmlykpuhb .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -535,7 +567,7 @@ y = X\beta + \epsilon
   padding-right: 5px;
 }
 
-#upqlcuvcgh .gt_first_summary_row {
+#gsmlykpuhb .gt_first_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -545,7 +577,7 @@ y = X\beta + \epsilon
   border-top-color: #D3D3D3;
 }
 
-#upqlcuvcgh .gt_grand_summary_row {
+#gsmlykpuhb .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -555,7 +587,7 @@ y = X\beta + \epsilon
   padding-right: 5px;
 }
 
-#upqlcuvcgh .gt_first_grand_summary_row {
+#gsmlykpuhb .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -565,11 +597,11 @@ y = X\beta + \epsilon
   border-top-color: #D3D3D3;
 }
 
-#upqlcuvcgh .gt_striped {
+#gsmlykpuhb .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#upqlcuvcgh .gt_table_body {
+#gsmlykpuhb .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -578,7 +610,7 @@ y = X\beta + \epsilon
   border-bottom-color: #D3D3D3;
 }
 
-#upqlcuvcgh .gt_footnotes {
+#gsmlykpuhb .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -592,13 +624,13 @@ y = X\beta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#upqlcuvcgh .gt_footnote {
+#gsmlykpuhb .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding: 4px;
 }
 
-#upqlcuvcgh .gt_sourcenotes {
+#gsmlykpuhb .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -612,41 +644,41 @@ y = X\beta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#upqlcuvcgh .gt_sourcenote {
+#gsmlykpuhb .gt_sourcenote {
   font-size: 90%;
   padding: 4px;
 }
 
-#upqlcuvcgh .gt_left {
+#gsmlykpuhb .gt_left {
   text-align: left;
 }
 
-#upqlcuvcgh .gt_center {
+#gsmlykpuhb .gt_center {
   text-align: center;
 }
 
-#upqlcuvcgh .gt_right {
+#gsmlykpuhb .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#upqlcuvcgh .gt_font_normal {
+#gsmlykpuhb .gt_font_normal {
   font-weight: normal;
 }
 
-#upqlcuvcgh .gt_font_bold {
+#gsmlykpuhb .gt_font_bold {
   font-weight: bold;
 }
 
-#upqlcuvcgh .gt_font_italic {
+#gsmlykpuhb .gt_font_italic {
   font-style: italic;
 }
 
-#upqlcuvcgh .gt_super {
+#gsmlykpuhb .gt_super {
   font-size: 65%;
 }
 
-#upqlcuvcgh .gt_footnote_marks {
+#gsmlykpuhb .gt_footnote_marks {
   font-style: italic;
   font-weight: normal;
   font-size: 65%;
@@ -722,19 +754,19 @@ y = X\beta + \epsilon
 </ul>
 <p>A few questions for you to think about: Was this the correct statistical model? Were the correct explanatory variables used and what happens if you try others? Does the same associations persist if we look at second dose uptake?</p>
 <p>One of the classical assumptions of an OLS regression model is the independence of errors (and to some extent observations as well). Since we have spatial data and areas closer together may be similar than those further apart (i.e., the characteristics and populations of Liverpool and Wirral are more similar than say, Liverpool and Guildford), this assumption may not hold. We can assess if this may be an issue through plotting the residuals (i.e., our error term <span class="math inline">\(\epsilon\)</span>) from the regression model and exploring if any spatial patterns exist.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="spatreg.html#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Join on </span></span>
-<span id="cb6-2"><a href="spatreg.html#cb6-2" aria-hidden="true" tabindex="-1"></a>lad_eng <span class="ot">&lt;-</span> <span class="fu">cbind</span>(lad_eng, model1<span class="sc">$</span>residuals)</span>
-<span id="cb6-3"><a href="spatreg.html#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-4"><a href="spatreg.html#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
-<span id="cb6-5"><a href="spatreg.html#cb6-5" aria-hidden="true" tabindex="-1"></a>map2 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="co"># Call ggplot command</span></span>
-<span id="cb6-6"><a href="spatreg.html#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng, <span class="fu">aes</span>(<span class="at">fill =</span> model1.residuals), <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Define what to plot</span></span>
-<span id="cb6-7"><a href="spatreg.html#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis</span>() <span class="sc">+</span> <span class="co"># Make colourblind friendly</span></span>
-<span id="cb6-8"><a href="spatreg.html#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">&quot;Longitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add x-axis label</span></span>
-<span id="cb6-9"><a href="spatreg.html#cb6-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">&quot;Latitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add y-axis label</span></span>
-<span id="cb6-10"><a href="spatreg.html#cb6-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;First dose uptake model&quot;</span>, <span class="co"># Edit plot title</span></span>
-<span id="cb6-11"><a href="spatreg.html#cb6-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">&quot;Residuals&quot;</span>) <span class="co"># Edit legend title</span></span>
-<span id="cb6-12"><a href="spatreg.html#cb6-12" aria-hidden="true" tabindex="-1"></a>map2 <span class="co"># Print plot</span></span></code></pre></div>
-<p><img src="Spatial-Data_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<div class="sourceCode" id="cb70"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb70-1"><a href="spatreg.html#cb70-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Join on </span></span>
+<span id="cb70-2"><a href="spatreg.html#cb70-2" aria-hidden="true" tabindex="-1"></a>lad_eng <span class="ot">&lt;-</span> <span class="fu">cbind</span>(lad_eng, model1<span class="sc">$</span>residuals)</span>
+<span id="cb70-3"><a href="spatreg.html#cb70-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb70-4"><a href="spatreg.html#cb70-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
+<span id="cb70-5"><a href="spatreg.html#cb70-5" aria-hidden="true" tabindex="-1"></a>map2 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="co"># Call ggplot command</span></span>
+<span id="cb70-6"><a href="spatreg.html#cb70-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> lad_eng, <span class="fu">aes</span>(<span class="at">fill =</span> model1.residuals), <span class="at">lwd =</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="co"># Define what to plot</span></span>
+<span id="cb70-7"><a href="spatreg.html#cb70-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis</span>() <span class="sc">+</span> <span class="co"># Make colourblind friendly</span></span>
+<span id="cb70-8"><a href="spatreg.html#cb70-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">&quot;Longitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add x-axis label</span></span>
+<span id="cb70-9"><a href="spatreg.html#cb70-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">&quot;Latitude&quot;</span>) <span class="sc">+</span> <span class="co"># Add y-axis label</span></span>
+<span id="cb70-10"><a href="spatreg.html#cb70-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;First dose uptake model&quot;</span>, <span class="co"># Edit plot title</span></span>
+<span id="cb70-11"><a href="spatreg.html#cb70-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill =</span> <span class="st">&quot;Residuals&quot;</span>) <span class="co"># Edit legend title</span></span>
+<span id="cb70-12"><a href="spatreg.html#cb70-12" aria-hidden="true" tabindex="-1"></a>map2 <span class="co"># Print plot</span></span></code></pre></div>
+<p><img src="Spatial-Data_files/figure-html/unnamed-chunk-44-1.png" width="672" /></p>
 <p>If there were no issues here, we might expect to find a random pattern. However, we can see this isn’t always the case. A positive residual would suggest that the observed value of an area is greater than what the model would predict based on the coefficients and it’s local values for each explanatory variable. There are some clustering of values in the North West, London and other urban areas. Similarly, a negative value suggests lower observed uptake than we might expect/predict from the model. We can see evidence of this in the West and South East of England.</p>
 <p>Our analysis may therefore benefit from having a spatial regression model.</p>
 </div>
@@ -743,12 +775,12 @@ y = X\beta + \epsilon
 <p>The first thing we might want to check is the extent that there is spatial clustering of our data. We will start here by checking this for our outcome variable and the regression model residuals. We will follow the same methods that we introduced in the <a href="cluster.html#cluster">previous session</a>.</p>
 <p>We will need to identify the spatial structure of our dataset. We will follow the same previous method of assigning neighbouring areas based on Queen’s contiguity. One issue here is that we have two Local Authorities that are islands (Isles of Scilly and Isle of Wight) which do not have any neighbours. To solve this, we could either assign the two islands manually to their nearest ‘neighbour’ (e.g., Isles of Scilly to Cornwall) or remove them from our analysis. For the basis of teaching you the methods here <del>and because I am too lazy to code it up as it is a faff</del>, we will just remove them from the data. We ought to re-run our regression model since we are dropping two observations, but we will not to save time here (we will correct this later so stay tuned).</p>
 <p>Let’s check the spatial clustering in our outcome variable through calculating the Moran’s I.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="spatreg.html#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(spdep) <span class="co"># Load package</span></span>
-<span id="cb7-2"><a href="spatreg.html#cb7-2" aria-hidden="true" tabindex="-1"></a>lad_eng <span class="ot">&lt;-</span> lad_eng[lad_eng<span class="sc">$</span>lad19cd <span class="sc">!=</span> <span class="st">&quot;E06000053&quot;</span> <span class="sc">&amp;</span> lad_eng<span class="sc">$</span>lad19cd <span class="sc">!=</span> <span class="st">&quot;E06000046&quot;</span>,] <span class="co"># Drop Isles of Scilly or Isle of Wight</span></span>
-<span id="cb7-3"><a href="spatreg.html#cb7-3" aria-hidden="true" tabindex="-1"></a>nb <span class="ot">&lt;-</span> <span class="fu">poly2nb</span>(lad_eng, <span class="at">queen =</span> <span class="cn">TRUE</span>) <span class="co"># Calculate queen contiguity for areas (slow)</span></span>
-<span id="cb7-4"><a href="spatreg.html#cb7-4" aria-hidden="true" tabindex="-1"></a>lw <span class="ot">&lt;-</span> <span class="fu">nb2listw</span>(nb, <span class="at">style =</span> <span class="st">&quot;W&quot;</span>, <span class="at">zero.policy =</span> <span class="cn">TRUE</span>) <span class="co"># Assign weights based on list of neighbours</span></span>
-<span id="cb7-5"><a href="spatreg.html#cb7-5" aria-hidden="true" tabindex="-1"></a>m1 <span class="ot">&lt;-</span> <span class="fu">moran.test</span>(lad_eng<span class="sc">$</span>percent_first_dose, lw) <span class="co"># Calculate Moran&#39;s I</span></span>
-<span id="cb7-6"><a href="spatreg.html#cb7-6" aria-hidden="true" tabindex="-1"></a>m1 <span class="co"># Print result</span></span></code></pre></div>
+<div class="sourceCode" id="cb71"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb71-1"><a href="spatreg.html#cb71-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(spdep) <span class="co"># Load package</span></span>
+<span id="cb71-2"><a href="spatreg.html#cb71-2" aria-hidden="true" tabindex="-1"></a>lad_eng <span class="ot">&lt;-</span> lad_eng[lad_eng<span class="sc">$</span>lad19cd <span class="sc">!=</span> <span class="st">&quot;E06000053&quot;</span> <span class="sc">&amp;</span> lad_eng<span class="sc">$</span>lad19cd <span class="sc">!=</span> <span class="st">&quot;E06000046&quot;</span>,] <span class="co"># Drop Isles of Scilly or Isle of Wight</span></span>
+<span id="cb71-3"><a href="spatreg.html#cb71-3" aria-hidden="true" tabindex="-1"></a>nb <span class="ot">&lt;-</span> <span class="fu">poly2nb</span>(lad_eng, <span class="at">queen =</span> <span class="cn">TRUE</span>) <span class="co"># Calculate queen contiguity for areas (slow)</span></span>
+<span id="cb71-4"><a href="spatreg.html#cb71-4" aria-hidden="true" tabindex="-1"></a>lw <span class="ot">&lt;-</span> <span class="fu">nb2listw</span>(nb, <span class="at">style =</span> <span class="st">&quot;W&quot;</span>, <span class="at">zero.policy =</span> <span class="cn">TRUE</span>) <span class="co"># Assign weights based on list of neighbours</span></span>
+<span id="cb71-5"><a href="spatreg.html#cb71-5" aria-hidden="true" tabindex="-1"></a>m1 <span class="ot">&lt;-</span> <span class="fu">moran.test</span>(lad_eng<span class="sc">$</span>percent_first_dose, lw) <span class="co"># Calculate Moran&#39;s I</span></span>
+<span id="cb71-6"><a href="spatreg.html#cb71-6" aria-hidden="true" tabindex="-1"></a>m1 <span class="co"># Print result</span></span></code></pre></div>
 <pre><code>## 
 ##  Moran I test under randomisation
 ## 
@@ -762,8 +794,8 @@ y = X\beta + \epsilon
 ##       0.407962351      -0.003184713       0.001383250</code></pre>
 <p>A Moran’s I value of 0.4079624 would indicate existence of moderate spatial clustering of first COVID-19 vaccination dose uptake.</p>
 <p>Next, we will repeat the analysis for the regression model residuals. Remember this is more important in checking the model assumptions.</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="spatreg.html#cb9-1" aria-hidden="true" tabindex="-1"></a>m2 <span class="ot">&lt;-</span> <span class="fu">moran.test</span>(lad_eng<span class="sc">$</span>model1.residuals, lw) <span class="co"># Calculate Moran&#39;s I</span></span>
-<span id="cb9-2"><a href="spatreg.html#cb9-2" aria-hidden="true" tabindex="-1"></a>m2 <span class="co"># Print result</span></span></code></pre></div>
+<div class="sourceCode" id="cb73"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb73-1"><a href="spatreg.html#cb73-1" aria-hidden="true" tabindex="-1"></a>m2 <span class="ot">&lt;-</span> <span class="fu">moran.test</span>(lad_eng<span class="sc">$</span>model1.residuals, lw) <span class="co"># Calculate Moran&#39;s I</span></span>
+<span id="cb73-2"><a href="spatreg.html#cb73-2" aria-hidden="true" tabindex="-1"></a>m2 <span class="co"># Print result</span></span></code></pre></div>
 <pre><code>## 
 ##  Moran I test under randomisation
 ## 
@@ -777,16 +809,15 @@ y = X\beta + \epsilon
 ##       0.271550385      -0.003184713       0.001375889</code></pre>
 <p>Here, a value of 0.2715504 suggests weak clustering. While low, the result is statistically significant suggesting it is important variation that we need to take in account in how we approach our regression analysis.</p>
 <p>Do you think that was a bit of a faff to code up? Well, you can do the whole thing in a single line of code thanks to <code>spdep</code>’s <code>lm.morantest</code> command. Indeed, it can allow us to update our regression model with the dropped observations quickly too. <del>OK I should I have said this earlier to not waste your time, but sorry not sorry as it is useful to show the manual process I hope.</del></p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="spatreg.html#cb11-1" aria-hidden="true" tabindex="-1"></a>model1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(percent_first_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng) <span class="co"># Re-run regression model</span></span>
-<span id="cb11-2"><a href="spatreg.html#cb11-2" aria-hidden="true" tabindex="-1"></a>m3 <span class="ot">&lt;-</span> <span class="fu">lm.morantest</span>(model1, lw) <span class="co"># Run Moran&#39;s I analysis of residuals</span></span>
-<span id="cb11-3"><a href="spatreg.html#cb11-3" aria-hidden="true" tabindex="-1"></a>m3 <span class="co"># Print results</span></span></code></pre></div>
+<div class="sourceCode" id="cb75"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb75-1"><a href="spatreg.html#cb75-1" aria-hidden="true" tabindex="-1"></a>model1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(percent_first_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng) <span class="co"># Re-run regression model</span></span>
+<span id="cb75-2"><a href="spatreg.html#cb75-2" aria-hidden="true" tabindex="-1"></a>m3 <span class="ot">&lt;-</span> <span class="fu">lm.morantest</span>(model1, lw) <span class="co"># Run Moran&#39;s I analysis of residuals</span></span>
+<span id="cb75-3"><a href="spatreg.html#cb75-3" aria-hidden="true" tabindex="-1"></a>m3 <span class="co"># Print results</span></span></code></pre></div>
 <pre><code>## 
 ##  Global Moran I for regression residuals
 ## 
 ## data:  
-## model: lm(formula = percent_first_dose ~ median_age + Other_White +
-## Mixed + Black + Asian + Other + mean_imd_score + pop_density, data =
-## lad_eng)
+## model: lm(formula = percent_first_dose ~ median_age + Other_White + Mixed + Black + Asian + Other + mean_imd_score +
+## pop_density, data = lad_eng)
 ## weights: lw
 ## 
 ## Moran I statistic standard deviate = 7.6783, p-value = 8.061e-15
@@ -799,15 +830,14 @@ y = X\beta + \epsilon
 <p>The other thing we could do is use a spatial regression model that explicitly accounts for the locations of each data point. Here we tell the regression model that the spatial structure of data points matters for their interpretation (i.e., data points closer to each other are more similar than those further apart). There are <em>a lot</em> of different types of spatial regression models. How might we select the correct model?</p>
 <p>Selection of models may be based on which specification we think best describes our data. This is hard to decide! The other approach is that we can utilise model fit statistics to assess which spatial models may improve upon the OLS regression model we previously fit. We can do this using <code>spdep</code>’s <code>lm.LMtests</code> function. Here we test for different features of <strong>spatial dependence</strong> in our data/model. For review here, please consult the lecture slides for this practical <a href="">located here</a>. Tl;dr spatial dependence is where the spatial configuration (i.e., structure of locations) affects our outcome.</p>
 <p>We will focus in this practical on spatial lag and spatial error models. The following code tests for whether a spatially lagged dependent variable or spatial error dependence can improve our model fit. We can test for more things using this code, but for now we stick with these four tests.</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="spatreg.html#cb13-1" aria-hidden="true" tabindex="-1"></a>spat_dep_test <span class="ot">&lt;-</span> <span class="fu">lm.LMtests</span>(model1, lw, <span class="at">test=</span><span class="fu">c</span>(<span class="st">&quot;LMerr&quot;</span>, <span class="st">&quot;LMlag&quot;</span>, <span class="st">&quot;RLMerr&quot;</span>, <span class="st">&quot;RLMlag&quot;</span>)) <span class="co"># Test for spatial dependence</span></span>
-<span id="cb13-2"><a href="spatreg.html#cb13-2" aria-hidden="true" tabindex="-1"></a>spat_dep_test</span></code></pre></div>
+<div class="sourceCode" id="cb77"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb77-1"><a href="spatreg.html#cb77-1" aria-hidden="true" tabindex="-1"></a>spat_dep_test <span class="ot">&lt;-</span> <span class="fu">lm.LMtests</span>(model1, lw, <span class="at">test=</span><span class="fu">c</span>(<span class="st">&quot;LMerr&quot;</span>, <span class="st">&quot;LMlag&quot;</span>, <span class="st">&quot;RLMerr&quot;</span>, <span class="st">&quot;RLMlag&quot;</span>)) <span class="co"># Test for spatial dependence</span></span>
+<span id="cb77-2"><a href="spatreg.html#cb77-2" aria-hidden="true" tabindex="-1"></a>spat_dep_test</span></code></pre></div>
 <pre><code>## 
 ##  Lagrange multiplier diagnostics for spatial dependence
 ## 
 ## data:  
-## model: lm(formula = percent_first_dose ~ median_age + Other_White +
-## Mixed + Black + Asian + Other + mean_imd_score + pop_density, data =
-## lad_eng)
+## model: lm(formula = percent_first_dose ~ median_age + Other_White + Mixed + Black + Asian + Other + mean_imd_score +
+## pop_density, data = lad_eng)
 ## weights: lw
 ## 
 ## LMerr = 52.31, df = 1, p-value = 4.738e-13
@@ -816,9 +846,8 @@ y = X\beta + \epsilon
 ##  Lagrange multiplier diagnostics for spatial dependence
 ## 
 ## data:  
-## model: lm(formula = percent_first_dose ~ median_age + Other_White +
-## Mixed + Black + Asian + Other + mean_imd_score + pop_density, data =
-## lad_eng)
+## model: lm(formula = percent_first_dose ~ median_age + Other_White + Mixed + Black + Asian + Other + mean_imd_score +
+## pop_density, data = lad_eng)
 ## weights: lw
 ## 
 ## LMlag = 37.432, df = 1, p-value = 9.466e-10
@@ -827,9 +856,8 @@ y = X\beta + \epsilon
 ##  Lagrange multiplier diagnostics for spatial dependence
 ## 
 ## data:  
-## model: lm(formula = percent_first_dose ~ median_age + Other_White +
-## Mixed + Black + Asian + Other + mean_imd_score + pop_density, data =
-## lad_eng)
+## model: lm(formula = percent_first_dose ~ median_age + Other_White + Mixed + Black + Asian + Other + mean_imd_score +
+## pop_density, data = lad_eng)
 ## weights: lw
 ## 
 ## RLMerr = 24.317, df = 1, p-value = 8.171e-07
@@ -838,9 +866,8 @@ y = X\beta + \epsilon
 ##  Lagrange multiplier diagnostics for spatial dependence
 ## 
 ## data:  
-## model: lm(formula = percent_first_dose ~ median_age + Other_White +
-## Mixed + Black + Asian + Other + mean_imd_score + pop_density, data =
-## lad_eng)
+## model: lm(formula = percent_first_dose ~ median_age + Other_White + Mixed + Black + Asian + Other + mean_imd_score +
+## pop_density, data = lad_eng)
 ## weights: lw
 ## 
 ## RLMlag = 9.4386, df = 1, p-value = 0.002125</code></pre>
@@ -857,16 +884,16 @@ y = X \beta + WX \theta + \epsilon
 \]</span></p>
 <p>The equation is a simple extension of the OLS regression equation. Our outcome variable <span class="math inline">\(y\)</span> is a function of our explanatory variables <span class="math inline">\(X\)</span> and their <span class="math inline">\(\beta\)</span> coefficients, a spatial lag coefficient <span class="math inline">\(\theta\)</span> of the <span class="math inline">\(X\)</span> variables based on a spatial weight <span class="math inline">\(W\)</span> and the error term <span class="math inline">\(\epsilon\)</span>. The <span class="math inline">\(\beta\)</span> value represents the <em>direct effect</em> of an explanatory variable and the <span class="math inline">\(\theta\)</span> value represents the <em>indirect effect</em>. An indirect effect is synonymous with a <em>spillover effect</em> whereby changes in <span class="math inline">\(x\)</span> in an area have on it’s surrounding neighbours based on how <span class="math inline">\(W\)</span> is defined. The spatial lags are exogenous in definition.</p>
 <p>To fit the model, we use the R package <code>spatialreg</code> which allows us to fit cross-sectional spatial regression models. We re-run the previous analysis of first dose uptake using this spatial model and tidy the output (please note that <code>gtsummary</code> does not handle spatial models well).</p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="spatreg.html#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(spatialreg) <span class="co"># Load package</span></span>
-<span id="cb15-2"><a href="spatreg.html#cb15-2" aria-hidden="true" tabindex="-1"></a>model2 <span class="ot">&lt;-</span> <span class="fu">lmSLX</span>(percent_first_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng, lw) <span class="co"># Spatial lag model</span></span>
-<span id="cb15-3"><a href="spatreg.html#cb15-3" aria-hidden="true" tabindex="-1"></a>tbl_model2 <span class="ot">&lt;-</span> <span class="fu">tbl_regression</span>(model2, <span class="at">label =</span> <span class="fu">list</span>(median_age <span class="sc">~</span> <span class="st">&quot;Median age&quot;</span>, Other_White <span class="sc">~</span> <span class="st">&quot;Other White (%)&quot;</span>, Mixed <span class="sc">~</span> <span class="st">&quot;Mixed (%)&quot;</span>, Black <span class="sc">~</span> <span class="st">&quot;Black (%)&quot;</span>, Asian <span class="sc">~</span> <span class="st">&quot;Asian (%)&quot;</span>, Other <span class="sc">~</span> <span class="st">&quot;Other Ethnicity (%)&quot;</span>, mean_imd_score <span class="sc">~</span> <span class="st">&quot;Deprivation score&quot;</span>, pop_density <span class="sc">~</span> <span class="st">&quot;Population density&quot;</span>, lag.median_age <span class="sc">~</span> <span class="st">&quot;Lag: Median age&quot;</span>, lag.Other_White <span class="sc">~</span> <span class="st">&quot;Lag: Other White (%)&quot;</span>, lag.Mixed <span class="sc">~</span> <span class="st">&quot;Lag: Mixed (%)&quot;</span>, lag.Black <span class="sc">~</span> <span class="st">&quot;Lag: Black (%)&quot;</span>, lag.Asian <span class="sc">~</span> <span class="st">&quot;Lag: Asian (%)&quot;</span>, lag.Other <span class="sc">~</span> <span class="st">&quot;Lag: Other Ethnicity (%)&quot;</span>, lag.mean_imd_score <span class="sc">~</span> <span class="st">&quot;Lag: Deprivation score&quot;</span>, lag.pop_density <span class="sc">~</span> <span class="st">&quot;Lag: Population density&quot;</span>)) <span class="co"># Tidy model output</span></span>
-<span id="cb15-4"><a href="spatreg.html#cb15-4" aria-hidden="true" tabindex="-1"></a>tbl_model2 <span class="co"># Print</span></span></code></pre></div>
-<div id="mgxciktcwb" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div class="sourceCode" id="cb79"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb79-1"><a href="spatreg.html#cb79-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(spatialreg) <span class="co"># Load package</span></span>
+<span id="cb79-2"><a href="spatreg.html#cb79-2" aria-hidden="true" tabindex="-1"></a>model2 <span class="ot">&lt;-</span> <span class="fu">lmSLX</span>(percent_first_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng, lw) <span class="co"># Spatial lag model</span></span>
+<span id="cb79-3"><a href="spatreg.html#cb79-3" aria-hidden="true" tabindex="-1"></a>tbl_model2 <span class="ot">&lt;-</span> <span class="fu">tbl_regression</span>(model2, <span class="at">label =</span> <span class="fu">list</span>(median_age <span class="sc">~</span> <span class="st">&quot;Median age&quot;</span>, Other_White <span class="sc">~</span> <span class="st">&quot;Other White (%)&quot;</span>, Mixed <span class="sc">~</span> <span class="st">&quot;Mixed (%)&quot;</span>, Black <span class="sc">~</span> <span class="st">&quot;Black (%)&quot;</span>, Asian <span class="sc">~</span> <span class="st">&quot;Asian (%)&quot;</span>, Other <span class="sc">~</span> <span class="st">&quot;Other Ethnicity (%)&quot;</span>, mean_imd_score <span class="sc">~</span> <span class="st">&quot;Deprivation score&quot;</span>, pop_density <span class="sc">~</span> <span class="st">&quot;Population density&quot;</span>, lag.median_age <span class="sc">~</span> <span class="st">&quot;Lag: Median age&quot;</span>, lag.Other_White <span class="sc">~</span> <span class="st">&quot;Lag: Other White (%)&quot;</span>, lag.Mixed <span class="sc">~</span> <span class="st">&quot;Lag: Mixed (%)&quot;</span>, lag.Black <span class="sc">~</span> <span class="st">&quot;Lag: Black (%)&quot;</span>, lag.Asian <span class="sc">~</span> <span class="st">&quot;Lag: Asian (%)&quot;</span>, lag.Other <span class="sc">~</span> <span class="st">&quot;Lag: Other Ethnicity (%)&quot;</span>, lag.mean_imd_score <span class="sc">~</span> <span class="st">&quot;Lag: Deprivation score&quot;</span>, lag.pop_density <span class="sc">~</span> <span class="st">&quot;Lag: Population density&quot;</span>)) <span class="co"># Tidy model output</span></span>
+<span id="cb79-4"><a href="spatreg.html#cb79-4" aria-hidden="true" tabindex="-1"></a>tbl_model2 <span class="co"># Print</span></span></code></pre></div>
+<div id="spertspcry" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
 
-#mgxciktcwb .gt_table {
+#spertspcry .gt_table {
   display: table;
   border-collapse: collapse;
   margin-left: auto;
@@ -891,7 +918,7 @@ y = X \beta + WX \theta + \epsilon
   border-left-color: #D3D3D3;
 }
 
-#mgxciktcwb .gt_heading {
+#spertspcry .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -903,7 +930,7 @@ y = X \beta + WX \theta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#mgxciktcwb .gt_title {
+#spertspcry .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -913,7 +940,7 @@ y = X \beta + WX \theta + \epsilon
   border-bottom-width: 0;
 }
 
-#mgxciktcwb .gt_subtitle {
+#spertspcry .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -923,13 +950,13 @@ y = X \beta + WX \theta + \epsilon
   border-top-width: 0;
 }
 
-#mgxciktcwb .gt_bottom_border {
+#spertspcry .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#mgxciktcwb .gt_col_headings {
+#spertspcry .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -944,7 +971,7 @@ y = X \beta + WX \theta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#mgxciktcwb .gt_col_heading {
+#spertspcry .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -964,7 +991,7 @@ y = X \beta + WX \theta + \epsilon
   overflow-x: hidden;
 }
 
-#mgxciktcwb .gt_column_spanner_outer {
+#spertspcry .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -976,15 +1003,15 @@ y = X \beta + WX \theta + \epsilon
   padding-right: 4px;
 }
 
-#mgxciktcwb .gt_column_spanner_outer:first-child {
+#spertspcry .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#mgxciktcwb .gt_column_spanner_outer:last-child {
+#spertspcry .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#mgxciktcwb .gt_column_spanner {
+#spertspcry .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -996,7 +1023,7 @@ y = X \beta + WX \theta + \epsilon
   width: 100%;
 }
 
-#mgxciktcwb .gt_group_heading {
+#spertspcry .gt_group_heading {
   padding: 8px;
   color: #333333;
   background-color: #FFFFFF;
@@ -1018,7 +1045,7 @@ y = X \beta + WX \theta + \epsilon
   vertical-align: middle;
 }
 
-#mgxciktcwb .gt_empty_group_heading {
+#spertspcry .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -1033,15 +1060,15 @@ y = X \beta + WX \theta + \epsilon
   vertical-align: middle;
 }
 
-#mgxciktcwb .gt_from_md > :first-child {
+#spertspcry .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#mgxciktcwb .gt_from_md > :last-child {
+#spertspcry .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#mgxciktcwb .gt_row {
+#spertspcry .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1060,7 +1087,7 @@ y = X \beta + WX \theta + \epsilon
   overflow-x: hidden;
 }
 
-#mgxciktcwb .gt_stub {
+#spertspcry .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1072,7 +1099,7 @@ y = X \beta + WX \theta + \epsilon
   padding-left: 12px;
 }
 
-#mgxciktcwb .gt_summary_row {
+#spertspcry .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -1082,7 +1109,7 @@ y = X \beta + WX \theta + \epsilon
   padding-right: 5px;
 }
 
-#mgxciktcwb .gt_first_summary_row {
+#spertspcry .gt_first_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1092,7 +1119,7 @@ y = X \beta + WX \theta + \epsilon
   border-top-color: #D3D3D3;
 }
 
-#mgxciktcwb .gt_grand_summary_row {
+#spertspcry .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -1102,7 +1129,7 @@ y = X \beta + WX \theta + \epsilon
   padding-right: 5px;
 }
 
-#mgxciktcwb .gt_first_grand_summary_row {
+#spertspcry .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1112,11 +1139,11 @@ y = X \beta + WX \theta + \epsilon
   border-top-color: #D3D3D3;
 }
 
-#mgxciktcwb .gt_striped {
+#spertspcry .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#mgxciktcwb .gt_table_body {
+#spertspcry .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -1125,7 +1152,7 @@ y = X \beta + WX \theta + \epsilon
   border-bottom-color: #D3D3D3;
 }
 
-#mgxciktcwb .gt_footnotes {
+#spertspcry .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -1139,13 +1166,13 @@ y = X \beta + WX \theta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#mgxciktcwb .gt_footnote {
+#spertspcry .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding: 4px;
 }
 
-#mgxciktcwb .gt_sourcenotes {
+#spertspcry .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -1159,41 +1186,41 @@ y = X \beta + WX \theta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#mgxciktcwb .gt_sourcenote {
+#spertspcry .gt_sourcenote {
   font-size: 90%;
   padding: 4px;
 }
 
-#mgxciktcwb .gt_left {
+#spertspcry .gt_left {
   text-align: left;
 }
 
-#mgxciktcwb .gt_center {
+#spertspcry .gt_center {
   text-align: center;
 }
 
-#mgxciktcwb .gt_right {
+#spertspcry .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#mgxciktcwb .gt_font_normal {
+#spertspcry .gt_font_normal {
   font-weight: normal;
 }
 
-#mgxciktcwb .gt_font_bold {
+#spertspcry .gt_font_bold {
   font-weight: bold;
 }
 
-#mgxciktcwb .gt_font_italic {
+#spertspcry .gt_font_italic {
   font-style: italic;
 }
 
-#mgxciktcwb .gt_super {
+#spertspcry .gt_super {
   font-size: 65%;
 }
 
-#mgxciktcwb .gt_footnote_marks {
+#spertspcry .gt_footnote_marks {
   font-style: italic;
   font-weight: normal;
   font-size: 65%;
@@ -1293,8 +1320,8 @@ y = X \beta + WX \theta + \epsilon
 </table>
 </div>
 <p>To interpret the model can be difficult. The <span class="math inline">\(\beta\)</span> coefficients are not exactly the same. Rather, to understand the marginal effect of our covariates, we need to estimate their total impacts (i.e., direct effect + indirect effect). To do this, we use the following piece of code.</p>
-<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="spatreg.html#cb16-1" aria-hidden="true" tabindex="-1"></a>model2_imp <span class="ot">&lt;-</span> <span class="fu">impacts</span>(model2, <span class="at">listw =</span> lw) <span class="co"># Estimate direct, indirect and total effects of variables</span></span>
-<span id="cb16-2"><a href="spatreg.html#cb16-2" aria-hidden="true" tabindex="-1"></a>model2_imp <span class="co"># Print</span></span></code></pre></div>
+<div class="sourceCode" id="cb80"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb80-1"><a href="spatreg.html#cb80-1" aria-hidden="true" tabindex="-1"></a>model2_imp <span class="ot">&lt;-</span> <span class="fu">impacts</span>(model2, <span class="at">listw =</span> lw) <span class="co"># Estimate direct, indirect and total effects of variables</span></span>
+<span id="cb80-2"><a href="spatreg.html#cb80-2" aria-hidden="true" tabindex="-1"></a>model2_imp <span class="co"># Print</span></span></code></pre></div>
 <pre><code>## Impact measures (SLX, estimable):
 ##                       Direct      Indirect         Total
 ## median_age      0.9009090557 -0.0696177362  0.8312913196
@@ -1307,8 +1334,8 @@ y = X \beta + WX \theta + \epsilon
 ## pop_density     0.0001022996 -0.0004974955 -0.0003951959</code></pre>
 <p>You will see here these are exactly the same as <span class="math inline">\(\beta\)</span> coefficients for this model, however this will not always be the case. What is useful here is that we can see the direct impact in an area, the indirect effects surrounding each and the total effect of each factor considering both together. The spatial lags here are mostly non-statistically significant, other than for population density. It suggests that they bring little to the model.</p>
 <p>Standard errors and p-values for these statistics can be estimated through the following modified version of the code.</p>
-<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="spatreg.html#cb18-1" aria-hidden="true" tabindex="-1"></a>model2_imp_se <span class="ot">&lt;-</span> <span class="fu">summary</span>(<span class="fu">impacts</span>(model2, lw), <span class="at">zstats =</span> <span class="cn">TRUE</span>) <span class="co"># Estimate</span></span>
-<span id="cb18-2"><a href="spatreg.html#cb18-2" aria-hidden="true" tabindex="-1"></a>model2_imp_se <span class="co"># Print</span></span></code></pre></div>
+<div class="sourceCode" id="cb82"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb82-1"><a href="spatreg.html#cb82-1" aria-hidden="true" tabindex="-1"></a>model2_imp_se <span class="ot">&lt;-</span> <span class="fu">summary</span>(<span class="fu">impacts</span>(model2, lw), <span class="at">zstats =</span> <span class="cn">TRUE</span>) <span class="co"># Estimate</span></span>
+<span id="cb82-2"><a href="spatreg.html#cb82-2" aria-hidden="true" tabindex="-1"></a>model2_imp_se <span class="co"># Print</span></span></code></pre></div>
 <pre><code>## Impact measures (SLX, estimable, n-k):
 ##                       Direct      Indirect         Total
 ## median_age      0.9009090557 -0.0696177362  0.8312913196
@@ -1353,13 +1380,13 @@ y = X \beta + WX \theta + \epsilon
 ## mean_imd_score 0.00029838 0.746920 0.00032879
 ## pop_density    0.39757950 0.045046 0.07479493</code></pre>
 <p>We can also compare the results from the spatial model to our original OLS regression model</p>
-<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="spatreg.html#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tbl_merge</span>(<span class="fu">list</span>(tbl_model1, tbl_model2)) <span class="co"># Combine both model outputs together</span></span></code></pre></div>
-<div id="urqpnenqof" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div class="sourceCode" id="cb84"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb84-1"><a href="spatreg.html#cb84-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tbl_merge</span>(<span class="fu">list</span>(tbl_model1, tbl_model2)) <span class="co"># Combine both model outputs together</span></span></code></pre></div>
+<div id="wbrozugdew" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
 
-#urqpnenqof .gt_table {
+#wbrozugdew .gt_table {
   display: table;
   border-collapse: collapse;
   margin-left: auto;
@@ -1384,7 +1411,7 @@ y = X \beta + WX \theta + \epsilon
   border-left-color: #D3D3D3;
 }
 
-#urqpnenqof .gt_heading {
+#wbrozugdew .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -1396,7 +1423,7 @@ y = X \beta + WX \theta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#urqpnenqof .gt_title {
+#wbrozugdew .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -1406,7 +1433,7 @@ y = X \beta + WX \theta + \epsilon
   border-bottom-width: 0;
 }
 
-#urqpnenqof .gt_subtitle {
+#wbrozugdew .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -1416,13 +1443,13 @@ y = X \beta + WX \theta + \epsilon
   border-top-width: 0;
 }
 
-#urqpnenqof .gt_bottom_border {
+#wbrozugdew .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#urqpnenqof .gt_col_headings {
+#wbrozugdew .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -1437,7 +1464,7 @@ y = X \beta + WX \theta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#urqpnenqof .gt_col_heading {
+#wbrozugdew .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1457,7 +1484,7 @@ y = X \beta + WX \theta + \epsilon
   overflow-x: hidden;
 }
 
-#urqpnenqof .gt_column_spanner_outer {
+#wbrozugdew .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1469,15 +1496,15 @@ y = X \beta + WX \theta + \epsilon
   padding-right: 4px;
 }
 
-#urqpnenqof .gt_column_spanner_outer:first-child {
+#wbrozugdew .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#urqpnenqof .gt_column_spanner_outer:last-child {
+#wbrozugdew .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#urqpnenqof .gt_column_spanner {
+#wbrozugdew .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -1489,7 +1516,7 @@ y = X \beta + WX \theta + \epsilon
   width: 100%;
 }
 
-#urqpnenqof .gt_group_heading {
+#wbrozugdew .gt_group_heading {
   padding: 8px;
   color: #333333;
   background-color: #FFFFFF;
@@ -1511,7 +1538,7 @@ y = X \beta + WX \theta + \epsilon
   vertical-align: middle;
 }
 
-#urqpnenqof .gt_empty_group_heading {
+#wbrozugdew .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -1526,15 +1553,15 @@ y = X \beta + WX \theta + \epsilon
   vertical-align: middle;
 }
 
-#urqpnenqof .gt_from_md > :first-child {
+#wbrozugdew .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#urqpnenqof .gt_from_md > :last-child {
+#wbrozugdew .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#urqpnenqof .gt_row {
+#wbrozugdew .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1553,7 +1580,7 @@ y = X \beta + WX \theta + \epsilon
   overflow-x: hidden;
 }
 
-#urqpnenqof .gt_stub {
+#wbrozugdew .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1565,7 +1592,7 @@ y = X \beta + WX \theta + \epsilon
   padding-left: 12px;
 }
 
-#urqpnenqof .gt_summary_row {
+#wbrozugdew .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -1575,7 +1602,7 @@ y = X \beta + WX \theta + \epsilon
   padding-right: 5px;
 }
 
-#urqpnenqof .gt_first_summary_row {
+#wbrozugdew .gt_first_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1585,7 +1612,7 @@ y = X \beta + WX \theta + \epsilon
   border-top-color: #D3D3D3;
 }
 
-#urqpnenqof .gt_grand_summary_row {
+#wbrozugdew .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -1595,7 +1622,7 @@ y = X \beta + WX \theta + \epsilon
   padding-right: 5px;
 }
 
-#urqpnenqof .gt_first_grand_summary_row {
+#wbrozugdew .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1605,11 +1632,11 @@ y = X \beta + WX \theta + \epsilon
   border-top-color: #D3D3D3;
 }
 
-#urqpnenqof .gt_striped {
+#wbrozugdew .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#urqpnenqof .gt_table_body {
+#wbrozugdew .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -1618,7 +1645,7 @@ y = X \beta + WX \theta + \epsilon
   border-bottom-color: #D3D3D3;
 }
 
-#urqpnenqof .gt_footnotes {
+#wbrozugdew .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -1632,13 +1659,13 @@ y = X \beta + WX \theta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#urqpnenqof .gt_footnote {
+#wbrozugdew .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding: 4px;
 }
 
-#urqpnenqof .gt_sourcenotes {
+#wbrozugdew .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -1652,41 +1679,41 @@ y = X \beta + WX \theta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#urqpnenqof .gt_sourcenote {
+#wbrozugdew .gt_sourcenote {
   font-size: 90%;
   padding: 4px;
 }
 
-#urqpnenqof .gt_left {
+#wbrozugdew .gt_left {
   text-align: left;
 }
 
-#urqpnenqof .gt_center {
+#wbrozugdew .gt_center {
   text-align: center;
 }
 
-#urqpnenqof .gt_right {
+#wbrozugdew .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#urqpnenqof .gt_font_normal {
+#wbrozugdew .gt_font_normal {
   font-weight: normal;
 }
 
-#urqpnenqof .gt_font_bold {
+#wbrozugdew .gt_font_bold {
   font-weight: bold;
 }
 
-#urqpnenqof .gt_font_italic {
+#wbrozugdew .gt_font_italic {
   font-style: italic;
 }
 
-#urqpnenqof .gt_super {
+#wbrozugdew .gt_super {
   font-size: 65%;
 }
 
-#urqpnenqof .gt_footnote_marks {
+#wbrozugdew .gt_footnote_marks {
   font-style: italic;
   font-weight: normal;
   font-size: 65%;
@@ -1846,9 +1873,9 @@ y = X \beta + WX \theta + \epsilon
 </div>
 <p>Not a lot has changed if we compare the direct effects of coefficients (many remain within their 95% confidence intervals), probably because the spatial lagged effects were not strong or identifiable. Population density has become non-statistically significant mind you, as has percentage of people who with mixed ethnicity.</p>
 <p>We can also compare model fit to see if the spatial model improves on the original OLS regression model. For example, we can check this by quickly looking at the AIC model fit.</p>
-<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="spatreg.html#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">AIC</span>(model1) <span class="co"># OLS regression model</span></span></code></pre></div>
+<div class="sourceCode" id="cb85"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb85-1"><a href="spatreg.html#cb85-1" aria-hidden="true" tabindex="-1"></a><span class="fu">AIC</span>(model1) <span class="co"># OLS regression model</span></span></code></pre></div>
 <pre><code>## [1] 1424.31</code></pre>
-<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="spatreg.html#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">AIC</span>(model2) <span class="co"># SLX spatial lag model</span></span></code></pre></div>
+<div class="sourceCode" id="cb87"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb87-1"><a href="spatreg.html#cb87-1" aria-hidden="true" tabindex="-1"></a><span class="fu">AIC</span>(model2) <span class="co"># SLX spatial lag model</span></span></code></pre></div>
 <pre><code>## [1] 1406.79</code></pre>
 <p>The spatial lag model does improve model fit overall.</p>
 </div>
@@ -1861,15 +1888,15 @@ y = \rho Wy + X\beta + \epsilon
 <p>SAR stands for Spatial AutoRegressive model. Here, we have the standard OLS regression equation <span class="math inline">\(X\beta + \epsilon\)</span>, however we also have included a spatial lag component <span class="math inline">\(\rho W\)</span> of our outcome variable <span class="math inline">\(y\)</span>. <span class="math inline">\(W\)</span> is once again our spatial weights matrix, with <span class="math inline">\(\rho\)</span> representing the correlation of the spatial lag of <span class="math inline">\(y\)</span> to <span class="math inline">\(y\)</span>.</p>
 <p>Since the model contains <span class="math inline">\(y\)</span> at both sides of the equation, it violates the exogeneity assumption of the OLS regression model. We therefore need a different approach to estimate the equation.</p>
 <p>Please note: <code>gtsummary</code> does not handle spatial models well, so we will have to <del>fudge it</del> persist a bit here. If you can fix it, send your answers on a postcard/carrier pigeon please. Remember, you can always get the raw output of a model by using <code>summary(model3)</code>.</p>
-<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="spatreg.html#cb25-1" aria-hidden="true" tabindex="-1"></a>model3 <span class="ot">&lt;-</span> <span class="fu">lagsarlm</span>(percent_first_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng, lw) <span class="co"># Model</span></span>
-<span id="cb25-2"><a href="spatreg.html#cb25-2" aria-hidden="true" tabindex="-1"></a>tbl_model3 <span class="ot">&lt;-</span> <span class="fu">tbl_regression</span>(model3) <span class="co"># Tidy model output</span></span>
-<span id="cb25-3"><a href="spatreg.html#cb25-3" aria-hidden="true" tabindex="-1"></a>tbl_model3 <span class="co"># Print</span></span></code></pre></div>
-<div id="ujzrpkkuhk" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div class="sourceCode" id="cb89"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb89-1"><a href="spatreg.html#cb89-1" aria-hidden="true" tabindex="-1"></a>model3 <span class="ot">&lt;-</span> <span class="fu">lagsarlm</span>(percent_first_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng, lw) <span class="co"># Model</span></span>
+<span id="cb89-2"><a href="spatreg.html#cb89-2" aria-hidden="true" tabindex="-1"></a>tbl_model3 <span class="ot">&lt;-</span> <span class="fu">tbl_regression</span>(model3) <span class="co"># Tidy model output</span></span>
+<span id="cb89-3"><a href="spatreg.html#cb89-3" aria-hidden="true" tabindex="-1"></a>tbl_model3 <span class="co"># Print</span></span></code></pre></div>
+<div id="uxoietalfs" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
 
-#ujzrpkkuhk .gt_table {
+#uxoietalfs .gt_table {
   display: table;
   border-collapse: collapse;
   margin-left: auto;
@@ -1894,7 +1921,7 @@ y = \rho Wy + X\beta + \epsilon
   border-left-color: #D3D3D3;
 }
 
-#ujzrpkkuhk .gt_heading {
+#uxoietalfs .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -1906,7 +1933,7 @@ y = \rho Wy + X\beta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#ujzrpkkuhk .gt_title {
+#uxoietalfs .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -1916,7 +1943,7 @@ y = \rho Wy + X\beta + \epsilon
   border-bottom-width: 0;
 }
 
-#ujzrpkkuhk .gt_subtitle {
+#uxoietalfs .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -1926,13 +1953,13 @@ y = \rho Wy + X\beta + \epsilon
   border-top-width: 0;
 }
 
-#ujzrpkkuhk .gt_bottom_border {
+#uxoietalfs .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#ujzrpkkuhk .gt_col_headings {
+#uxoietalfs .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -1947,7 +1974,7 @@ y = \rho Wy + X\beta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#ujzrpkkuhk .gt_col_heading {
+#uxoietalfs .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1967,7 +1994,7 @@ y = \rho Wy + X\beta + \epsilon
   overflow-x: hidden;
 }
 
-#ujzrpkkuhk .gt_column_spanner_outer {
+#uxoietalfs .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1979,15 +2006,15 @@ y = \rho Wy + X\beta + \epsilon
   padding-right: 4px;
 }
 
-#ujzrpkkuhk .gt_column_spanner_outer:first-child {
+#uxoietalfs .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#ujzrpkkuhk .gt_column_spanner_outer:last-child {
+#uxoietalfs .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#ujzrpkkuhk .gt_column_spanner {
+#uxoietalfs .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -1999,7 +2026,7 @@ y = \rho Wy + X\beta + \epsilon
   width: 100%;
 }
 
-#ujzrpkkuhk .gt_group_heading {
+#uxoietalfs .gt_group_heading {
   padding: 8px;
   color: #333333;
   background-color: #FFFFFF;
@@ -2021,7 +2048,7 @@ y = \rho Wy + X\beta + \epsilon
   vertical-align: middle;
 }
 
-#ujzrpkkuhk .gt_empty_group_heading {
+#uxoietalfs .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -2036,15 +2063,15 @@ y = \rho Wy + X\beta + \epsilon
   vertical-align: middle;
 }
 
-#ujzrpkkuhk .gt_from_md > :first-child {
+#uxoietalfs .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#ujzrpkkuhk .gt_from_md > :last-child {
+#uxoietalfs .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#ujzrpkkuhk .gt_row {
+#uxoietalfs .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2063,7 +2090,7 @@ y = \rho Wy + X\beta + \epsilon
   overflow-x: hidden;
 }
 
-#ujzrpkkuhk .gt_stub {
+#uxoietalfs .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -2075,7 +2102,7 @@ y = \rho Wy + X\beta + \epsilon
   padding-left: 12px;
 }
 
-#ujzrpkkuhk .gt_summary_row {
+#uxoietalfs .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -2085,7 +2112,7 @@ y = \rho Wy + X\beta + \epsilon
   padding-right: 5px;
 }
 
-#ujzrpkkuhk .gt_first_summary_row {
+#uxoietalfs .gt_first_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2095,7 +2122,7 @@ y = \rho Wy + X\beta + \epsilon
   border-top-color: #D3D3D3;
 }
 
-#ujzrpkkuhk .gt_grand_summary_row {
+#uxoietalfs .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -2105,7 +2132,7 @@ y = \rho Wy + X\beta + \epsilon
   padding-right: 5px;
 }
 
-#ujzrpkkuhk .gt_first_grand_summary_row {
+#uxoietalfs .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2115,11 +2142,11 @@ y = \rho Wy + X\beta + \epsilon
   border-top-color: #D3D3D3;
 }
 
-#ujzrpkkuhk .gt_striped {
+#uxoietalfs .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#ujzrpkkuhk .gt_table_body {
+#uxoietalfs .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -2128,7 +2155,7 @@ y = \rho Wy + X\beta + \epsilon
   border-bottom-color: #D3D3D3;
 }
 
-#ujzrpkkuhk .gt_footnotes {
+#uxoietalfs .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -2142,13 +2169,13 @@ y = \rho Wy + X\beta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#ujzrpkkuhk .gt_footnote {
+#uxoietalfs .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding: 4px;
 }
 
-#ujzrpkkuhk .gt_sourcenotes {
+#uxoietalfs .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -2162,41 +2189,41 @@ y = \rho Wy + X\beta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#ujzrpkkuhk .gt_sourcenote {
+#uxoietalfs .gt_sourcenote {
   font-size: 90%;
   padding: 4px;
 }
 
-#ujzrpkkuhk .gt_left {
+#uxoietalfs .gt_left {
   text-align: left;
 }
 
-#ujzrpkkuhk .gt_center {
+#uxoietalfs .gt_center {
   text-align: center;
 }
 
-#ujzrpkkuhk .gt_right {
+#uxoietalfs .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#ujzrpkkuhk .gt_font_normal {
+#uxoietalfs .gt_font_normal {
   font-weight: normal;
 }
 
-#ujzrpkkuhk .gt_font_bold {
+#uxoietalfs .gt_font_bold {
   font-weight: bold;
 }
 
-#ujzrpkkuhk .gt_font_italic {
+#uxoietalfs .gt_font_italic {
   font-style: italic;
 }
 
-#ujzrpkkuhk .gt_super {
+#uxoietalfs .gt_super {
   font-size: 65%;
 }
 
-#ujzrpkkuhk .gt_footnote_marks {
+#uxoietalfs .gt_footnote_marks {
   font-style: italic;
   font-weight: normal;
   font-size: 65%;
@@ -2272,9 +2299,9 @@ y = \rho Wy + X\beta + \epsilon
 </table>
 </div>
 <p>Let’s compare it to our standard OLS regression model. We will go back to the untidy version of the output to match the above</p>
-<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="spatreg.html#cb26-1" aria-hidden="true" tabindex="-1"></a>tbl_model1 <span class="ot">&lt;-</span> <span class="fu">tbl_regression</span>(model1, <span class="at">intercept =</span> <span class="cn">TRUE</span>) <span class="co"># Redo Table 1 to match above format</span></span>
-<span id="cb26-2"><a href="spatreg.html#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tbl_merge</span>(<span class="at">tbls =</span> <span class="fu">list</span>(tbl_model1, tbl_model3), <span class="co"># Join output together</span></span>
-<span id="cb26-3"><a href="spatreg.html#cb26-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">tab_spanner =</span> <span class="fu">c</span>(<span class="st">&quot;**OLS**&quot;</span>, <span class="st">&quot;**Spatial Lag**&quot;</span>)) <span class="co"># Rename columns (in bold)</span></span></code></pre></div>
+<div class="sourceCode" id="cb90"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb90-1"><a href="spatreg.html#cb90-1" aria-hidden="true" tabindex="-1"></a>tbl_model1 <span class="ot">&lt;-</span> <span class="fu">tbl_regression</span>(model1, <span class="at">intercept =</span> <span class="cn">TRUE</span>) <span class="co"># Redo Table 1 to match above format</span></span>
+<span id="cb90-2"><a href="spatreg.html#cb90-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tbl_merge</span>(<span class="at">tbls =</span> <span class="fu">list</span>(tbl_model1, tbl_model3), <span class="co"># Join output together</span></span>
+<span id="cb90-3"><a href="spatreg.html#cb90-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">tab_spanner =</span> <span class="fu">c</span>(<span class="st">&quot;**OLS**&quot;</span>, <span class="st">&quot;**Spatial Lag**&quot;</span>)) <span class="co"># Rename columns (in bold)</span></span></code></pre></div>
 <pre><code>## Warning: `columns = vars(...)` has been deprecated in gt 0.3.0:
 ## * please use `columns = c(...)` instead
 
@@ -2349,12 +2376,12 @@ y = \rho Wy + X\beta + \epsilon
 
 ## Warning: `columns = vars(...)` has been deprecated in gt 0.3.0:
 ## * please use `columns = c(...)` instead</code></pre>
-<div id="evaezpzxuo" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="oewslwquxi" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
 
-#evaezpzxuo .gt_table {
+#oewslwquxi .gt_table {
   display: table;
   border-collapse: collapse;
   margin-left: auto;
@@ -2379,7 +2406,7 @@ y = \rho Wy + X\beta + \epsilon
   border-left-color: #D3D3D3;
 }
 
-#evaezpzxuo .gt_heading {
+#oewslwquxi .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -2391,7 +2418,7 @@ y = \rho Wy + X\beta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#evaezpzxuo .gt_title {
+#oewslwquxi .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -2401,7 +2428,7 @@ y = \rho Wy + X\beta + \epsilon
   border-bottom-width: 0;
 }
 
-#evaezpzxuo .gt_subtitle {
+#oewslwquxi .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -2411,13 +2438,13 @@ y = \rho Wy + X\beta + \epsilon
   border-top-width: 0;
 }
 
-#evaezpzxuo .gt_bottom_border {
+#oewslwquxi .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#evaezpzxuo .gt_col_headings {
+#oewslwquxi .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -2432,7 +2459,7 @@ y = \rho Wy + X\beta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#evaezpzxuo .gt_col_heading {
+#oewslwquxi .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -2452,7 +2479,7 @@ y = \rho Wy + X\beta + \epsilon
   overflow-x: hidden;
 }
 
-#evaezpzxuo .gt_column_spanner_outer {
+#oewslwquxi .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -2464,15 +2491,15 @@ y = \rho Wy + X\beta + \epsilon
   padding-right: 4px;
 }
 
-#evaezpzxuo .gt_column_spanner_outer:first-child {
+#oewslwquxi .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#evaezpzxuo .gt_column_spanner_outer:last-child {
+#oewslwquxi .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#evaezpzxuo .gt_column_spanner {
+#oewslwquxi .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -2484,7 +2511,7 @@ y = \rho Wy + X\beta + \epsilon
   width: 100%;
 }
 
-#evaezpzxuo .gt_group_heading {
+#oewslwquxi .gt_group_heading {
   padding: 8px;
   color: #333333;
   background-color: #FFFFFF;
@@ -2506,7 +2533,7 @@ y = \rho Wy + X\beta + \epsilon
   vertical-align: middle;
 }
 
-#evaezpzxuo .gt_empty_group_heading {
+#oewslwquxi .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -2521,15 +2548,15 @@ y = \rho Wy + X\beta + \epsilon
   vertical-align: middle;
 }
 
-#evaezpzxuo .gt_from_md > :first-child {
+#oewslwquxi .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#evaezpzxuo .gt_from_md > :last-child {
+#oewslwquxi .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#evaezpzxuo .gt_row {
+#oewslwquxi .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2548,7 +2575,7 @@ y = \rho Wy + X\beta + \epsilon
   overflow-x: hidden;
 }
 
-#evaezpzxuo .gt_stub {
+#oewslwquxi .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -2560,7 +2587,7 @@ y = \rho Wy + X\beta + \epsilon
   padding-left: 12px;
 }
 
-#evaezpzxuo .gt_summary_row {
+#oewslwquxi .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -2570,7 +2597,7 @@ y = \rho Wy + X\beta + \epsilon
   padding-right: 5px;
 }
 
-#evaezpzxuo .gt_first_summary_row {
+#oewslwquxi .gt_first_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2580,7 +2607,7 @@ y = \rho Wy + X\beta + \epsilon
   border-top-color: #D3D3D3;
 }
 
-#evaezpzxuo .gt_grand_summary_row {
+#oewslwquxi .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -2590,7 +2617,7 @@ y = \rho Wy + X\beta + \epsilon
   padding-right: 5px;
 }
 
-#evaezpzxuo .gt_first_grand_summary_row {
+#oewslwquxi .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2600,11 +2627,11 @@ y = \rho Wy + X\beta + \epsilon
   border-top-color: #D3D3D3;
 }
 
-#evaezpzxuo .gt_striped {
+#oewslwquxi .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#evaezpzxuo .gt_table_body {
+#oewslwquxi .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -2613,7 +2640,7 @@ y = \rho Wy + X\beta + \epsilon
   border-bottom-color: #D3D3D3;
 }
 
-#evaezpzxuo .gt_footnotes {
+#oewslwquxi .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -2627,13 +2654,13 @@ y = \rho Wy + X\beta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#evaezpzxuo .gt_footnote {
+#oewslwquxi .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding: 4px;
 }
 
-#evaezpzxuo .gt_sourcenotes {
+#oewslwquxi .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -2647,41 +2674,41 @@ y = \rho Wy + X\beta + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#evaezpzxuo .gt_sourcenote {
+#oewslwquxi .gt_sourcenote {
   font-size: 90%;
   padding: 4px;
 }
 
-#evaezpzxuo .gt_left {
+#oewslwquxi .gt_left {
   text-align: left;
 }
 
-#evaezpzxuo .gt_center {
+#oewslwquxi .gt_center {
   text-align: center;
 }
 
-#evaezpzxuo .gt_right {
+#oewslwquxi .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#evaezpzxuo .gt_font_normal {
+#oewslwquxi .gt_font_normal {
   font-weight: normal;
 }
 
-#evaezpzxuo .gt_font_bold {
+#oewslwquxi .gt_font_bold {
   font-weight: bold;
 }
 
-#evaezpzxuo .gt_font_italic {
+#oewslwquxi .gt_font_italic {
   font-style: italic;
 }
 
-#evaezpzxuo .gt_super {
+#oewslwquxi .gt_super {
   font-size: 65%;
 }
 
-#evaezpzxuo .gt_footnote_marks {
+#oewslwquxi .gt_footnote_marks {
   font-style: italic;
   font-weight: normal;
   font-size: 65%;
@@ -2799,7 +2826,7 @@ y = \rho Wy + X\beta + \epsilon
 </div>
 <p>Not a lot has changed between the models, suggesting that the spatial patterns captured very little of the patterns observed in our covariates. The most interesting difference is for our population density variable <code>pop_density</code>, which has gone from statistically significant in our OLS regression model to insignificant in our spatial lag model. The percentage of people with their ethnicity as other White (<code>Other_White</code>) has now become statistically significant as well, with a negative association to the percentage vaccinated. Otherwise, the coefficients have remained similar and within the 95% Confidence Intervals of the OLS estimates.</p>
 <p>The summary output for the spatial lag model gives us only the direct impacts for our coefficients, however we may be interested in the direct, indirect and total effects each covariate is having on our outcome variable.</p>
-<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="spatreg.html#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">impacts</span>(model3, <span class="at">listw =</span> lw) <span class="co"># Estimate direct and indirect effects</span></span></code></pre></div>
+<div class="sourceCode" id="cb92"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb92-1"><a href="spatreg.html#cb92-1" aria-hidden="true" tabindex="-1"></a><span class="fu">impacts</span>(model3, <span class="at">listw =</span> lw) <span class="co"># Estimate direct and indirect effects</span></span></code></pre></div>
 <pre><code>## Impact measures (lag, exact):
 ##                       Direct      Indirect         Total
 ## median_age      0.8509693217  2.364693e-01  1.0874386629
@@ -2812,7 +2839,7 @@ y = \rho Wy + X\beta + \epsilon
 ## pop_density    -0.0001353991 -3.762503e-05 -0.0001730242</code></pre>
 <p>The table would suggest that the indirect effects of each covariate on the surrounding areas means that focusing on the direct association alone underestimates the total impact of each variable.</p>
 <p>To get the standard errors and p-values for our direct, indirect and total effects, we use the following code. Unlike the SLX model, we cannot estimate these directly and therefore must use simulations (MCMC) approaches to estimate them. This only requires a slight modification to the code, in our case we will add in 500 simulations (the more the merrier, but impacts on processing time).</p>
-<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="spatreg.html#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(<span class="fu">impacts</span>(model3, <span class="at">listw =</span> lw, <span class="at">R =</span> <span class="dv">500</span>), <span class="at">zstats =</span> <span class="cn">TRUE</span>) <span class="co"># Slow, but gives quantiles etc</span></span></code></pre></div>
+<div class="sourceCode" id="cb94"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb94-1"><a href="spatreg.html#cb94-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(<span class="fu">impacts</span>(model3, <span class="at">listw =</span> lw, <span class="at">R =</span> <span class="dv">500</span>), <span class="at">zstats =</span> <span class="cn">TRUE</span>) <span class="co"># Slow, but gives quantiles etc</span></span></code></pre></div>
 <pre><code>## Impact measures (lag, exact):
 ##                       Direct      Indirect         Total
 ## median_age      0.8509693217  2.364693e-01  1.0874386629
@@ -2836,26 +2863,26 @@ y = \rho Wy + X\beta + \epsilon
 ##    plus standard error of the mean:
 ## 
 ##                      Mean        SD  Naive SE Time-series SE
-## median_age      0.8490882 4.139e-02 1.851e-03      1.851e-03
-## Other_White    -0.0916608 4.419e-02 1.976e-03      1.976e-03
-## Mixed           0.3881596 1.440e-01 6.442e-03      6.442e-03
-## Black          -0.1659304 4.844e-02 2.166e-03      2.166e-03
-## Asian           0.0401529 1.968e-02 8.800e-04      8.800e-04
-## Other          -0.0487234 1.059e-01 4.735e-03      4.837e-03
-## mean_imd_score -0.1162231 1.847e-02 8.260e-04      8.260e-04
-## pop_density    -0.0001346 9.785e-05 4.376e-06      4.376e-06
+## median_age      0.8525121 4.038e-02 1.806e-03      1.806e-03
+## Other_White    -0.0931258 4.419e-02 1.976e-03      1.976e-03
+## Mixed           0.3982622 1.494e-01 6.682e-03      6.682e-03
+## Black          -0.1656767 5.150e-02 2.303e-03      2.157e-03
+## Asian           0.0403707 2.028e-02 9.068e-04      9.068e-04
+## Other          -0.0346247 1.024e-01 4.580e-03      4.580e-03
+## mean_imd_score -0.1137616 1.920e-02 8.588e-04      8.588e-04
+## pop_density    -0.0001375 9.734e-05 4.353e-06      4.353e-06
 ## 
 ## 2. Quantiles for each variable:
 ## 
-##                      2.5%        25%        50%        75%      97.5%
-## median_age      0.7728056  0.8194174  0.8476065  8.784e-01  9.291e-01
-## Other_White    -0.1788798 -0.1217448 -0.0906167 -6.286e-02  3.236e-04
-## Mixed           0.1206031  0.2846064  0.3844480  4.855e-01  6.725e-01
-## Black          -0.2574561 -0.1986944 -0.1661104 -1.354e-01 -7.285e-02
-## Asian          -0.0007781  0.0261224  0.0401500  5.454e-02  7.943e-02
-## Other          -0.2596697 -0.1190610 -0.0509472  2.096e-02  1.524e-01
-## mean_imd_score -0.1508520 -0.1286904 -0.1159279 -1.036e-01 -8.067e-02
-## pop_density    -0.0003168 -0.0002011 -0.0001371 -6.902e-05  6.619e-05
+##                      2.5%       25%        50%        75%      97.5%
+## median_age      0.7742765  0.825442  0.8538912  8.782e-01  9.249e-01
+## Other_White    -0.1786118 -0.121101 -0.0927149 -6.467e-02 -1.025e-02
+## Mixed           0.1137999  0.303110  0.4026023  4.936e-01  6.791e-01
+## Black          -0.2702979 -0.200784 -0.1657098 -1.294e-01 -7.291e-02
+## Asian           0.0013119  0.025561  0.0400029  5.471e-02  7.826e-02
+## Other          -0.2354788 -0.098935 -0.0333859  3.072e-02  1.562e-01
+## mean_imd_score -0.1501918 -0.126077 -0.1143237 -1.021e-01 -7.450e-02
+## pop_density    -0.0003154 -0.000204 -0.0001362 -7.563e-05  5.295e-05
 ## 
 ## ========================================================
 ## Indirect:
@@ -2869,26 +2896,26 @@ y = \rho Wy + X\beta + \epsilon
 ##    plus standard error of the mean:
 ## 
 ##                      Mean        SD  Naive SE Time-series SE
-## median_age      2.342e-01 4.665e-02 2.086e-03      2.086e-03
-## Other_White    -2.551e-02 1.383e-02 6.183e-04      5.572e-04
-## Mixed           1.069e-01 4.416e-02 1.975e-03      1.975e-03
-## Black          -4.511e-02 1.397e-02 6.246e-04      7.028e-04
-## Asian           1.120e-02 6.215e-03 2.779e-04      2.779e-04
-## Other          -1.234e-02 2.902e-02 1.298e-03      1.302e-03
-## mean_imd_score -3.219e-02 8.558e-03 3.827e-04      3.827e-04
-## pop_density    -3.644e-05 2.739e-05 1.225e-06      1.225e-06
+## median_age      2.405e-01 5.020e-02 2.245e-03      2.245e-03
+## Other_White    -2.644e-02 1.424e-02 6.370e-04      5.752e-04
+## Mixed           1.129e-01 4.999e-02 2.235e-03      2.235e-03
+## Black          -4.619e-02 1.592e-02 7.122e-04      7.122e-04
+## Asian           1.156e-02 6.640e-03 2.969e-04      2.969e-04
+## Other          -9.145e-03 2.925e-02 1.308e-03      1.308e-03
+## mean_imd_score -3.218e-02 8.807e-03 3.939e-04      3.591e-04
+## pop_density    -3.786e-05 2.731e-05 1.221e-06      1.221e-06
 ## 
 ## 2. Quantiles for each variable:
 ## 
 ##                      2.5%        25%        50%        75%      97.5%
-## median_age      1.509e-01  2.033e-01  2.314e-01  2.620e-01  3.347e-01
-## Other_White    -5.321e-02 -3.365e-02 -2.466e-02 -1.624e-02  7.438e-05
-## Mixed           2.902e-02  7.517e-02  1.037e-01  1.350e-01  1.996e-01
-## Black          -7.147e-02 -5.484e-02 -4.537e-02 -3.570e-02 -1.903e-02
-## Asian          -1.941e-04  6.754e-03  1.058e-02  1.549e-02  2.477e-02
-## Other          -7.127e-02 -3.045e-02 -1.375e-02  5.751e-03  4.596e-02
-## mean_imd_score -5.001e-02 -3.783e-02 -3.105e-02 -2.631e-02 -1.771e-02
-## pop_density    -9.168e-05 -5.167e-05 -3.638e-05 -1.955e-05  1.825e-05
+## median_age      1.536e-01  2.041e-01  2.366e-01  2.754e-01  3.402e-01
+## Other_White    -5.527e-02 -3.480e-02 -2.552e-02 -1.696e-02 -2.372e-03
+## Mixed           2.852e-02  7.892e-02  1.091e-01  1.447e-01  2.175e-01
+## Black          -7.968e-02 -5.651e-02 -4.486e-02 -3.477e-02 -1.970e-02
+## Asian           3.712e-04  6.883e-03  1.076e-02  1.592e-02  2.528e-02
+## Other          -7.010e-02 -2.694e-02 -9.219e-03  8.430e-03  4.732e-02
+## mean_imd_score -5.121e-02 -3.791e-02 -3.172e-02 -2.601e-02 -1.645e-02
+## pop_density    -9.482e-05 -5.543e-05 -3.776e-05 -2.012e-05  1.481e-05
 ## 
 ## ========================================================
 ## Total:
@@ -2902,60 +2929,60 @@ y = \rho Wy + X\beta + \epsilon
 ##    plus standard error of the mean:
 ## 
 ##                      Mean        SD  Naive SE Time-series SE
-## median_age      1.0832973 0.0713271 3.190e-03      3.190e-03
-## Other_White    -0.1171757 0.0572281 2.559e-03      2.559e-03
-## Mixed           0.4950522 0.1840728 8.232e-03      8.232e-03
-## Black          -0.2110450 0.0601936 2.692e-03      2.692e-03
-## Asian           0.0513539 0.0255278 1.142e-03      1.142e-03
-## Other          -0.0610590 0.1343976 6.010e-03      6.120e-03
-## mean_imd_score -0.1484082 0.0252032 1.127e-03      1.127e-03
-## pop_density    -0.0001711 0.0001241 5.552e-06      5.552e-06
+## median_age      1.0929770 0.0736553 3.294e-03      3.294e-03
+## Other_White    -0.1195685 0.0574824 2.571e-03      2.571e-03
+## Mixed           0.5111369 0.1947910 8.711e-03      8.711e-03
+## Black          -0.2118644 0.0650089 2.907e-03      2.907e-03
+## Asian           0.0519308 0.0264846 1.184e-03      1.184e-03
+## Other          -0.0437694 0.1311488 5.865e-03      5.865e-03
+## mean_imd_score -0.1459417 0.0260142 1.163e-03      1.163e-03
+## pop_density    -0.0001753 0.0001234 5.517e-06      5.517e-06
 ## 
 ## 2. Quantiles for each variable:
 ## 
 ##                      2.5%        25%        50%        75%      97.5%
-## median_age      0.9566314  1.0348888  1.0829030  1.126e+00  1.229e+00
-## Other_White    -0.2276786 -0.1552094 -0.1165559 -8.020e-02  3.980e-04
-## Mixed           0.1518747  0.3679714  0.4896368  6.247e-01  8.485e-01
-## Black          -0.3240290 -0.2535467 -0.2114426 -1.716e-01 -9.597e-02
-## Asian          -0.0009720  0.0330089  0.0508691  7.045e-02  1.006e-01
-## Other          -0.3268285 -0.1501183 -0.0647096  2.609e-02  1.967e-01
-## mean_imd_score -0.1955688 -0.1647703 -0.1470796 -1.325e-01 -1.003e-01
-## pop_density    -0.0004113 -0.0002521 -0.0001764 -8.898e-05  8.326e-05
+## median_age      0.9555211  1.0432652  1.0900711  1.146e+00  1.236e+00
+## Other_White    -0.2328298 -0.1560703 -0.1194452 -8.298e-02 -1.277e-02
+## Mixed           0.1390956  0.3846310  0.5179249  6.328e-01  8.995e-01
+## Black          -0.3357829 -0.2559570 -0.2117105 -1.670e-01 -9.434e-02
+## Asian           0.0016831  0.0328099  0.0516210  7.085e-02  1.019e-01
+## Other          -0.3009490 -0.1265225 -0.0430737  4.023e-02  1.966e-01
+## mean_imd_score -0.1950171 -0.1623149 -0.1468028 -1.305e-01 -9.528e-02
+## pop_density    -0.0003987 -0.0002676 -0.0001727 -9.592e-05  6.967e-05
 ## 
 ## ========================================================
 ## Simulated standard errors
 ##                      Direct     Indirect        Total
-## median_age     4.139497e-02 4.665135e-02 0.0713271073
-## Other_White    4.419422e-02 1.382665e-02 0.0572280974
-## Mixed          1.440422e-01 4.416335e-02 0.1840728241
-## Black          4.843701e-02 1.396579e-02 0.0601936499
-## Asian          1.967695e-02 6.214760e-03 0.0255277974
-## Other          1.058854e-01 2.902235e-02 0.1343976221
-## mean_imd_score 1.847104e-02 8.558374e-03 0.0252031971
-## pop_density    9.785063e-05 2.738718e-05 0.0001241375
+## median_age     4.038093e-02 5.020011e-02 0.0736552558
+## Other_White    4.419156e-02 1.424436e-02 0.0574823745
+## Mixed          1.494219e-01 4.998651e-02 0.1947909898
+## Black          5.149804e-02 1.592425e-02 0.0650089053
+## Asian          2.027763e-02 6.639541e-03 0.0264846444
+## Other          1.024182e-01 2.925324e-02 0.1311488321
+## mean_imd_score 1.920265e-02 8.807172e-03 0.0260142304
+## pop_density    9.734392e-05 2.730753e-05 0.0001233592
 ## 
 ## Simulated z-values:
-##                    Direct   Indirect      Total
-## median_age     20.5118671  5.0204130 15.1877361
-## Other_White    -2.0740445 -1.8453468 -2.0475212
-## Mixed           2.6947637  2.4203907  2.6894364
-## Black          -3.4256938 -3.2303697 -3.5061015
-## Asian           2.0406082  1.8023131  2.0116852
-## Other          -0.4601522 -0.4250389 -0.4543164
-## mean_imd_score -6.2921784 -3.7606662 -5.8884691
-## pop_density    -1.3760495 -1.3305363 -1.3782052
+##                    Direct   Indirect     Total
+## median_age     21.1117524  4.7901252 14.839090
+## Other_White    -2.1073216 -1.8563599 -2.080090
+## Mixed           2.6653536  2.2581031  2.624027
+## Black          -3.2171469 -2.9004602 -3.259006
+## Asian           1.9908999  1.7410899  1.960788
+## Other          -0.3380712 -0.3126044 -0.333738
+## mean_imd_score -5.9242663 -3.6538507 -5.610072
+## pop_density    -1.4122687 -1.3864974 -1.421358
 ## 
 ## Simulated p-values:
 ##                Direct     Indirect   Total     
-## median_age     &lt; 2.22e-16 5.156e-07  &lt; 2.22e-16
-## Other_White    0.03807518 0.06498710 0.04060694
-## Mixed          0.00704386 0.01550384 0.00715728
-## Black          0.00061323 0.00123630 0.00045472
-## Asian          0.04128978 0.07149616 0.04425313
-## Other          0.64540698 0.67080831 0.64960110
-## mean_imd_score 3.1304e-10 0.00016946 3.8979e-09
-## pop_density    0.16880632 0.18334163 0.16813996</code></pre>
+## median_age     &lt; 2.22e-16 1.6668e-06 &lt; 2.22e-16
+## Other_White    0.0350897  0.06340228 0.0375173 
+## Mixed          0.0076907  0.02393924 0.0086897 
+## Black          0.0012947  0.00372615 0.0011180 
+## Asian          0.0464919  0.08166783 0.0499038 
+## Other          0.7353095  0.75458121 0.7385772 
+## mean_imd_score 3.1369e-09 0.00025834 2.0224e-08
+## pop_density    0.1578709  0.16559506 0.1552128</code></pre>
 <p>It gives a lot of output, but it is useful to pick apart how useful our estimates are.</p>
 </div>
 </div>
@@ -2974,15 +3001,15 @@ u = \lambda Wu + \epsilon
 \]</span></p>
 <p>We define <span class="math inline">\(u\)</span> as a coefficient <span class="math inline">\(\lambda\)</span> controlling the spatial weight <span class="math inline">\(W\)</span> placed on the the error terms <span class="math inline">\(u\)</span>, plus the general error term <span class="math inline">\(\epsilon\)</span> for our model.</p>
 <p>We cannot use the OLS regression model to estimate the equation, since the assumption of independence of error terms is violated. We therefore require new approaches to do this. Again, <code>gtsummary</code> doesn’t like these types of models but I have included here as it helps clean the output up.</p>
-<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb32-1"><a href="spatreg.html#cb32-1" aria-hidden="true" tabindex="-1"></a>model4 <span class="ot">&lt;-</span> <span class="fu">errorsarlm</span>(percent_first_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng, lw) <span class="co"># Model</span></span>
-<span id="cb32-2"><a href="spatreg.html#cb32-2" aria-hidden="true" tabindex="-1"></a>tbl_model4 <span class="ot">&lt;-</span> <span class="fu">tbl_regression</span>(model4) <span class="co"># Tidy model output</span></span></code></pre></div>
+<div class="sourceCode" id="cb96"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb96-1"><a href="spatreg.html#cb96-1" aria-hidden="true" tabindex="-1"></a>model4 <span class="ot">&lt;-</span> <span class="fu">errorsarlm</span>(percent_first_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng, lw) <span class="co"># Model</span></span>
+<span id="cb96-2"><a href="spatreg.html#cb96-2" aria-hidden="true" tabindex="-1"></a>tbl_model4 <span class="ot">&lt;-</span> <span class="fu">tbl_regression</span>(model4) <span class="co"># Tidy model output</span></span></code></pre></div>
 <pre><code>## x Unable to identify the list of variables.
 ## 
 ## This is usually due to an error calling `stats::model.frame(x)`or `stats::model.matrix(x)`.
 ## It could be the case if that type of model does not implement these methods.
 ## Rarely, this error may occur if the model object was created within
 ## a functional programming framework (e.g. using `lappy()`, `purrr::map()`, etc.).</code></pre>
-<div class="sourceCode" id="cb34"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb34-1"><a href="spatreg.html#cb34-1" aria-hidden="true" tabindex="-1"></a>tbl_model4 <span class="co"># Print</span></span></code></pre></div>
+<div class="sourceCode" id="cb98"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb98-1"><a href="spatreg.html#cb98-1" aria-hidden="true" tabindex="-1"></a>tbl_model4 <span class="co"># Print</span></span></code></pre></div>
 <pre><code>## Warning: `columns = vars(...)` has been deprecated in gt 0.3.0:
 ## * please use `columns = c(...)` instead
 
@@ -3021,12 +3048,12 @@ u = \lambda Wu + \epsilon
 
 ## Warning: `columns = vars(...)` has been deprecated in gt 0.3.0:
 ## * please use `columns = c(...)` instead</code></pre>
-<div id="qqdtdcbhkb" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="sbgjgzhvtc" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
 
-#qqdtdcbhkb .gt_table {
+#sbgjgzhvtc .gt_table {
   display: table;
   border-collapse: collapse;
   margin-left: auto;
@@ -3051,7 +3078,7 @@ u = \lambda Wu + \epsilon
   border-left-color: #D3D3D3;
 }
 
-#qqdtdcbhkb .gt_heading {
+#sbgjgzhvtc .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -3063,7 +3090,7 @@ u = \lambda Wu + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#qqdtdcbhkb .gt_title {
+#sbgjgzhvtc .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -3073,7 +3100,7 @@ u = \lambda Wu + \epsilon
   border-bottom-width: 0;
 }
 
-#qqdtdcbhkb .gt_subtitle {
+#sbgjgzhvtc .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -3083,13 +3110,13 @@ u = \lambda Wu + \epsilon
   border-top-width: 0;
 }
 
-#qqdtdcbhkb .gt_bottom_border {
+#sbgjgzhvtc .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#qqdtdcbhkb .gt_col_headings {
+#sbgjgzhvtc .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -3104,7 +3131,7 @@ u = \lambda Wu + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#qqdtdcbhkb .gt_col_heading {
+#sbgjgzhvtc .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -3124,7 +3151,7 @@ u = \lambda Wu + \epsilon
   overflow-x: hidden;
 }
 
-#qqdtdcbhkb .gt_column_spanner_outer {
+#sbgjgzhvtc .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -3136,15 +3163,15 @@ u = \lambda Wu + \epsilon
   padding-right: 4px;
 }
 
-#qqdtdcbhkb .gt_column_spanner_outer:first-child {
+#sbgjgzhvtc .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#qqdtdcbhkb .gt_column_spanner_outer:last-child {
+#sbgjgzhvtc .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#qqdtdcbhkb .gt_column_spanner {
+#sbgjgzhvtc .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -3156,7 +3183,7 @@ u = \lambda Wu + \epsilon
   width: 100%;
 }
 
-#qqdtdcbhkb .gt_group_heading {
+#sbgjgzhvtc .gt_group_heading {
   padding: 8px;
   color: #333333;
   background-color: #FFFFFF;
@@ -3178,7 +3205,7 @@ u = \lambda Wu + \epsilon
   vertical-align: middle;
 }
 
-#qqdtdcbhkb .gt_empty_group_heading {
+#sbgjgzhvtc .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -3193,15 +3220,15 @@ u = \lambda Wu + \epsilon
   vertical-align: middle;
 }
 
-#qqdtdcbhkb .gt_from_md > :first-child {
+#sbgjgzhvtc .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#qqdtdcbhkb .gt_from_md > :last-child {
+#sbgjgzhvtc .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#qqdtdcbhkb .gt_row {
+#sbgjgzhvtc .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -3220,7 +3247,7 @@ u = \lambda Wu + \epsilon
   overflow-x: hidden;
 }
 
-#qqdtdcbhkb .gt_stub {
+#sbgjgzhvtc .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -3232,7 +3259,7 @@ u = \lambda Wu + \epsilon
   padding-left: 12px;
 }
 
-#qqdtdcbhkb .gt_summary_row {
+#sbgjgzhvtc .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -3242,7 +3269,7 @@ u = \lambda Wu + \epsilon
   padding-right: 5px;
 }
 
-#qqdtdcbhkb .gt_first_summary_row {
+#sbgjgzhvtc .gt_first_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -3252,7 +3279,7 @@ u = \lambda Wu + \epsilon
   border-top-color: #D3D3D3;
 }
 
-#qqdtdcbhkb .gt_grand_summary_row {
+#sbgjgzhvtc .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -3262,7 +3289,7 @@ u = \lambda Wu + \epsilon
   padding-right: 5px;
 }
 
-#qqdtdcbhkb .gt_first_grand_summary_row {
+#sbgjgzhvtc .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -3272,11 +3299,11 @@ u = \lambda Wu + \epsilon
   border-top-color: #D3D3D3;
 }
 
-#qqdtdcbhkb .gt_striped {
+#sbgjgzhvtc .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#qqdtdcbhkb .gt_table_body {
+#sbgjgzhvtc .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -3285,7 +3312,7 @@ u = \lambda Wu + \epsilon
   border-bottom-color: #D3D3D3;
 }
 
-#qqdtdcbhkb .gt_footnotes {
+#sbgjgzhvtc .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -3299,13 +3326,13 @@ u = \lambda Wu + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#qqdtdcbhkb .gt_footnote {
+#sbgjgzhvtc .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding: 4px;
 }
 
-#qqdtdcbhkb .gt_sourcenotes {
+#sbgjgzhvtc .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -3319,41 +3346,41 @@ u = \lambda Wu + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#qqdtdcbhkb .gt_sourcenote {
+#sbgjgzhvtc .gt_sourcenote {
   font-size: 90%;
   padding: 4px;
 }
 
-#qqdtdcbhkb .gt_left {
+#sbgjgzhvtc .gt_left {
   text-align: left;
 }
 
-#qqdtdcbhkb .gt_center {
+#sbgjgzhvtc .gt_center {
   text-align: center;
 }
 
-#qqdtdcbhkb .gt_right {
+#sbgjgzhvtc .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#qqdtdcbhkb .gt_font_normal {
+#sbgjgzhvtc .gt_font_normal {
   font-weight: normal;
 }
 
-#qqdtdcbhkb .gt_font_bold {
+#sbgjgzhvtc .gt_font_bold {
   font-weight: bold;
 }
 
-#qqdtdcbhkb .gt_font_italic {
+#sbgjgzhvtc .gt_font_italic {
   font-style: italic;
 }
 
-#qqdtdcbhkb .gt_super {
+#sbgjgzhvtc .gt_super {
   font-size: 65%;
 }
 
-#qqdtdcbhkb .gt_footnote_marks {
+#sbgjgzhvtc .gt_footnote_marks {
   font-style: italic;
   font-weight: normal;
   font-size: 65%;
@@ -3430,8 +3457,8 @@ u = \lambda Wu + \epsilon
 </div>
 <p>These models do not have direct and indirect effects since the spatial component only affects the error term.</p>
 <p>We may also want to check whether a spatial error model was relevant here through running a <strong>Hausman Test</strong> which compares if the model improves upon the OLS model.</p>
-<div class="sourceCode" id="cb36"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb36-1"><a href="spatreg.html#cb36-1" aria-hidden="true" tabindex="-1"></a>HausmanTest <span class="ot">&lt;-</span> <span class="fu">Hausman.test</span>(model4) <span class="co"># Run test</span></span>
-<span id="cb36-2"><a href="spatreg.html#cb36-2" aria-hidden="true" tabindex="-1"></a>HausmanTest <span class="co"># Print</span></span></code></pre></div>
+<div class="sourceCode" id="cb100"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb100-1"><a href="spatreg.html#cb100-1" aria-hidden="true" tabindex="-1"></a>HausmanTest <span class="ot">&lt;-</span> <span class="fu">Hausman.test</span>(model4) <span class="co"># Run test</span></span>
+<span id="cb100-2"><a href="spatreg.html#cb100-2" aria-hidden="true" tabindex="-1"></a>HausmanTest <span class="co"># Print</span></span></code></pre></div>
 <pre><code>## 
 ##  Spatial Hausman test (asymptotic)
 ## 
@@ -3439,14 +3466,14 @@ u = \lambda Wu + \epsilon
 ## Hausman test = 21.562, df = 9, p-value = 0.01038</code></pre>
 <p>The test suggests that the spatial error improves the model (i.e., we want it to be statistically significant).</p>
 <p>We can compare the model output to the OLS and spatial lag models too.</p>
-<div class="sourceCode" id="cb38"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb38-1"><a href="spatreg.html#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tbl_merge</span>(<span class="at">tbls =</span> <span class="fu">list</span>(tbl_model1, tbl_model3, tbl_model4), <span class="co"># Join three model outputs together</span></span>
-<span id="cb38-2"><a href="spatreg.html#cb38-2" aria-hidden="true" tabindex="-1"></a>          <span class="at">tab_spanner =</span> <span class="fu">c</span>(<span class="st">&quot;**OLS**&quot;</span>, <span class="st">&quot;**Spatial Lag**&quot;</span>, <span class="st">&quot;**Spatial Error**&quot;</span>)) <span class="co"># Rename columns (in bold)</span></span></code></pre></div>
-<div id="noewxbazrn" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div class="sourceCode" id="cb102"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb102-1"><a href="spatreg.html#cb102-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tbl_merge</span>(<span class="at">tbls =</span> <span class="fu">list</span>(tbl_model1, tbl_model3, tbl_model4), <span class="co"># Join three model outputs together</span></span>
+<span id="cb102-2"><a href="spatreg.html#cb102-2" aria-hidden="true" tabindex="-1"></a>          <span class="at">tab_spanner =</span> <span class="fu">c</span>(<span class="st">&quot;**OLS**&quot;</span>, <span class="st">&quot;**Spatial Lag**&quot;</span>, <span class="st">&quot;**Spatial Error**&quot;</span>)) <span class="co"># Rename columns (in bold)</span></span></code></pre></div>
+<div id="nymtpmrsvs" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
 
-#noewxbazrn .gt_table {
+#nymtpmrsvs .gt_table {
   display: table;
   border-collapse: collapse;
   margin-left: auto;
@@ -3471,7 +3498,7 @@ u = \lambda Wu + \epsilon
   border-left-color: #D3D3D3;
 }
 
-#noewxbazrn .gt_heading {
+#nymtpmrsvs .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -3483,7 +3510,7 @@ u = \lambda Wu + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#noewxbazrn .gt_title {
+#nymtpmrsvs .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -3493,7 +3520,7 @@ u = \lambda Wu + \epsilon
   border-bottom-width: 0;
 }
 
-#noewxbazrn .gt_subtitle {
+#nymtpmrsvs .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -3503,13 +3530,13 @@ u = \lambda Wu + \epsilon
   border-top-width: 0;
 }
 
-#noewxbazrn .gt_bottom_border {
+#nymtpmrsvs .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#noewxbazrn .gt_col_headings {
+#nymtpmrsvs .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -3524,7 +3551,7 @@ u = \lambda Wu + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#noewxbazrn .gt_col_heading {
+#nymtpmrsvs .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -3544,7 +3571,7 @@ u = \lambda Wu + \epsilon
   overflow-x: hidden;
 }
 
-#noewxbazrn .gt_column_spanner_outer {
+#nymtpmrsvs .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -3556,15 +3583,15 @@ u = \lambda Wu + \epsilon
   padding-right: 4px;
 }
 
-#noewxbazrn .gt_column_spanner_outer:first-child {
+#nymtpmrsvs .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#noewxbazrn .gt_column_spanner_outer:last-child {
+#nymtpmrsvs .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#noewxbazrn .gt_column_spanner {
+#nymtpmrsvs .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -3576,7 +3603,7 @@ u = \lambda Wu + \epsilon
   width: 100%;
 }
 
-#noewxbazrn .gt_group_heading {
+#nymtpmrsvs .gt_group_heading {
   padding: 8px;
   color: #333333;
   background-color: #FFFFFF;
@@ -3598,7 +3625,7 @@ u = \lambda Wu + \epsilon
   vertical-align: middle;
 }
 
-#noewxbazrn .gt_empty_group_heading {
+#nymtpmrsvs .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -3613,15 +3640,15 @@ u = \lambda Wu + \epsilon
   vertical-align: middle;
 }
 
-#noewxbazrn .gt_from_md > :first-child {
+#nymtpmrsvs .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#noewxbazrn .gt_from_md > :last-child {
+#nymtpmrsvs .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#noewxbazrn .gt_row {
+#nymtpmrsvs .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -3640,7 +3667,7 @@ u = \lambda Wu + \epsilon
   overflow-x: hidden;
 }
 
-#noewxbazrn .gt_stub {
+#nymtpmrsvs .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -3652,7 +3679,7 @@ u = \lambda Wu + \epsilon
   padding-left: 12px;
 }
 
-#noewxbazrn .gt_summary_row {
+#nymtpmrsvs .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -3662,7 +3689,7 @@ u = \lambda Wu + \epsilon
   padding-right: 5px;
 }
 
-#noewxbazrn .gt_first_summary_row {
+#nymtpmrsvs .gt_first_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -3672,7 +3699,7 @@ u = \lambda Wu + \epsilon
   border-top-color: #D3D3D3;
 }
 
-#noewxbazrn .gt_grand_summary_row {
+#nymtpmrsvs .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -3682,7 +3709,7 @@ u = \lambda Wu + \epsilon
   padding-right: 5px;
 }
 
-#noewxbazrn .gt_first_grand_summary_row {
+#nymtpmrsvs .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -3692,11 +3719,11 @@ u = \lambda Wu + \epsilon
   border-top-color: #D3D3D3;
 }
 
-#noewxbazrn .gt_striped {
+#nymtpmrsvs .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#noewxbazrn .gt_table_body {
+#nymtpmrsvs .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -3705,7 +3732,7 @@ u = \lambda Wu + \epsilon
   border-bottom-color: #D3D3D3;
 }
 
-#noewxbazrn .gt_footnotes {
+#nymtpmrsvs .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -3719,13 +3746,13 @@ u = \lambda Wu + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#noewxbazrn .gt_footnote {
+#nymtpmrsvs .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding: 4px;
 }
 
-#noewxbazrn .gt_sourcenotes {
+#nymtpmrsvs .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -3739,41 +3766,41 @@ u = \lambda Wu + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#noewxbazrn .gt_sourcenote {
+#nymtpmrsvs .gt_sourcenote {
   font-size: 90%;
   padding: 4px;
 }
 
-#noewxbazrn .gt_left {
+#nymtpmrsvs .gt_left {
   text-align: left;
 }
 
-#noewxbazrn .gt_center {
+#nymtpmrsvs .gt_center {
   text-align: center;
 }
 
-#noewxbazrn .gt_right {
+#nymtpmrsvs .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#noewxbazrn .gt_font_normal {
+#nymtpmrsvs .gt_font_normal {
   font-weight: normal;
 }
 
-#noewxbazrn .gt_font_bold {
+#nymtpmrsvs .gt_font_bold {
   font-weight: bold;
 }
 
-#noewxbazrn .gt_font_italic {
+#nymtpmrsvs .gt_font_italic {
   font-style: italic;
 }
 
-#noewxbazrn .gt_super {
+#nymtpmrsvs .gt_super {
   font-size: 65%;
 }
 
-#noewxbazrn .gt_footnote_marks {
+#nymtpmrsvs .gt_footnote_marks {
   font-style: italic;
   font-weight: normal;
   font-size: 65%;
@@ -3949,15 +3976,15 @@ The key difference to the spatial error model is the introduction of <span class
 u = \lambda Wu + \epsilon
 \]</span></p>
 <p>We can fit this model using a slight change to the spatial error code. Please note that <code>gtsummary</code> does not like this type of model output either, so it is a little messy again.</p>
-<div class="sourceCode" id="cb39"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb39-1"><a href="spatreg.html#cb39-1" aria-hidden="true" tabindex="-1"></a>model5 <span class="ot">&lt;-</span> <span class="fu">errorsarlm</span>(percent_first_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng, lw, <span class="at">etype =</span> <span class="st">&quot;emixed&quot;</span>) <span class="co"># Fit model</span></span>
-<span id="cb39-2"><a href="spatreg.html#cb39-2" aria-hidden="true" tabindex="-1"></a>tbl_model5 <span class="ot">&lt;-</span> <span class="fu">tbl_regression</span>(model5) <span class="co"># Tidy model output</span></span>
-<span id="cb39-3"><a href="spatreg.html#cb39-3" aria-hidden="true" tabindex="-1"></a>tbl_model5 <span class="co"># Print</span></span></code></pre></div>
-<div id="worsotnykr" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div class="sourceCode" id="cb103"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb103-1"><a href="spatreg.html#cb103-1" aria-hidden="true" tabindex="-1"></a>model5 <span class="ot">&lt;-</span> <span class="fu">errorsarlm</span>(percent_first_dose <span class="sc">~</span> median_age <span class="sc">+</span> Other_White <span class="sc">+</span> Mixed <span class="sc">+</span> Black <span class="sc">+</span> Asian <span class="sc">+</span> Other <span class="sc">+</span> mean_imd_score <span class="sc">+</span> pop_density, <span class="at">data =</span> lad_eng, lw, <span class="at">etype =</span> <span class="st">&quot;emixed&quot;</span>) <span class="co"># Fit model</span></span>
+<span id="cb103-2"><a href="spatreg.html#cb103-2" aria-hidden="true" tabindex="-1"></a>tbl_model5 <span class="ot">&lt;-</span> <span class="fu">tbl_regression</span>(model5) <span class="co"># Tidy model output</span></span>
+<span id="cb103-3"><a href="spatreg.html#cb103-3" aria-hidden="true" tabindex="-1"></a>tbl_model5 <span class="co"># Print</span></span></code></pre></div>
+<div id="xrniunwets" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
 
-#worsotnykr .gt_table {
+#xrniunwets .gt_table {
   display: table;
   border-collapse: collapse;
   margin-left: auto;
@@ -3982,7 +4009,7 @@ u = \lambda Wu + \epsilon
   border-left-color: #D3D3D3;
 }
 
-#worsotnykr .gt_heading {
+#xrniunwets .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -3994,7 +4021,7 @@ u = \lambda Wu + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#worsotnykr .gt_title {
+#xrniunwets .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -4004,7 +4031,7 @@ u = \lambda Wu + \epsilon
   border-bottom-width: 0;
 }
 
-#worsotnykr .gt_subtitle {
+#xrniunwets .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -4014,13 +4041,13 @@ u = \lambda Wu + \epsilon
   border-top-width: 0;
 }
 
-#worsotnykr .gt_bottom_border {
+#xrniunwets .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#worsotnykr .gt_col_headings {
+#xrniunwets .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -4035,7 +4062,7 @@ u = \lambda Wu + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#worsotnykr .gt_col_heading {
+#xrniunwets .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -4055,7 +4082,7 @@ u = \lambda Wu + \epsilon
   overflow-x: hidden;
 }
 
-#worsotnykr .gt_column_spanner_outer {
+#xrniunwets .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -4067,15 +4094,15 @@ u = \lambda Wu + \epsilon
   padding-right: 4px;
 }
 
-#worsotnykr .gt_column_spanner_outer:first-child {
+#xrniunwets .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#worsotnykr .gt_column_spanner_outer:last-child {
+#xrniunwets .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#worsotnykr .gt_column_spanner {
+#xrniunwets .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -4087,7 +4114,7 @@ u = \lambda Wu + \epsilon
   width: 100%;
 }
 
-#worsotnykr .gt_group_heading {
+#xrniunwets .gt_group_heading {
   padding: 8px;
   color: #333333;
   background-color: #FFFFFF;
@@ -4109,7 +4136,7 @@ u = \lambda Wu + \epsilon
   vertical-align: middle;
 }
 
-#worsotnykr .gt_empty_group_heading {
+#xrniunwets .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -4124,15 +4151,15 @@ u = \lambda Wu + \epsilon
   vertical-align: middle;
 }
 
-#worsotnykr .gt_from_md > :first-child {
+#xrniunwets .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#worsotnykr .gt_from_md > :last-child {
+#xrniunwets .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#worsotnykr .gt_row {
+#xrniunwets .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -4151,7 +4178,7 @@ u = \lambda Wu + \epsilon
   overflow-x: hidden;
 }
 
-#worsotnykr .gt_stub {
+#xrniunwets .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -4163,7 +4190,7 @@ u = \lambda Wu + \epsilon
   padding-left: 12px;
 }
 
-#worsotnykr .gt_summary_row {
+#xrniunwets .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -4173,7 +4200,7 @@ u = \lambda Wu + \epsilon
   padding-right: 5px;
 }
 
-#worsotnykr .gt_first_summary_row {
+#xrniunwets .gt_first_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -4183,7 +4210,7 @@ u = \lambda Wu + \epsilon
   border-top-color: #D3D3D3;
 }
 
-#worsotnykr .gt_grand_summary_row {
+#xrniunwets .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -4193,7 +4220,7 @@ u = \lambda Wu + \epsilon
   padding-right: 5px;
 }
 
-#worsotnykr .gt_first_grand_summary_row {
+#xrniunwets .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -4203,11 +4230,11 @@ u = \lambda Wu + \epsilon
   border-top-color: #D3D3D3;
 }
 
-#worsotnykr .gt_striped {
+#xrniunwets .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#worsotnykr .gt_table_body {
+#xrniunwets .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -4216,7 +4243,7 @@ u = \lambda Wu + \epsilon
   border-bottom-color: #D3D3D3;
 }
 
-#worsotnykr .gt_footnotes {
+#xrniunwets .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -4230,13 +4257,13 @@ u = \lambda Wu + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#worsotnykr .gt_footnote {
+#xrniunwets .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding: 4px;
 }
 
-#worsotnykr .gt_sourcenotes {
+#xrniunwets .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -4250,41 +4277,41 @@ u = \lambda Wu + \epsilon
   border-right-color: #D3D3D3;
 }
 
-#worsotnykr .gt_sourcenote {
+#xrniunwets .gt_sourcenote {
   font-size: 90%;
   padding: 4px;
 }
 
-#worsotnykr .gt_left {
+#xrniunwets .gt_left {
   text-align: left;
 }
 
-#worsotnykr .gt_center {
+#xrniunwets .gt_center {
   text-align: center;
 }
 
-#worsotnykr .gt_right {
+#xrniunwets .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#worsotnykr .gt_font_normal {
+#xrniunwets .gt_font_normal {
   font-weight: normal;
 }
 
-#worsotnykr .gt_font_bold {
+#xrniunwets .gt_font_bold {
   font-weight: bold;
 }
 
-#worsotnykr .gt_font_italic {
+#xrniunwets .gt_font_italic {
   font-style: italic;
 }
 
-#worsotnykr .gt_super {
+#xrniunwets .gt_super {
   font-size: 65%;
 }
 
-#worsotnykr .gt_footnote_marks {
+#xrniunwets .gt_footnote_marks {
   font-style: italic;
   font-weight: normal;
   font-size: 65%;
@@ -4392,7 +4419,7 @@ u = \lambda Wu + \epsilon
 </table>
 </div>
 <p>The inclusion of spatial lags does not seem to bring much advantage here. Since we have introduced spatial lags into our model, we can also calculate the direct, indirect and total effects of covariates too. I have included the code for calculating standard errors, however we don’t need to run it again <del>because I am lazy</del>.</p>
-<div class="sourceCode" id="cb40"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb40-1"><a href="spatreg.html#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="fu">impacts</span>(model5, <span class="at">listw =</span> lw) <span class="co"># Calculate indirect, direct and total effects</span></span></code></pre></div>
+<div class="sourceCode" id="cb104"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb104-1"><a href="spatreg.html#cb104-1" aria-hidden="true" tabindex="-1"></a><span class="fu">impacts</span>(model5, <span class="at">listw =</span> lw) <span class="co"># Calculate indirect, direct and total effects</span></span></code></pre></div>
 <pre><code>## Impact measures (SDEM, estimable):
 ##                       Direct      Indirect         Total
 ## median_age      9.115621e-01 -0.0841690665  0.8273930013
@@ -4403,7 +4430,7 @@ u = \lambda Wu + \epsilon
 ## Other           3.784383e-03 -0.3849049537 -0.3811205710
 ## mean_imd_score -7.049241e-02 -0.0594952812 -0.1299876895
 ## pop_density     5.783698e-05 -0.0003724632 -0.0003146262</code></pre>
-<div class="sourceCode" id="cb42"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb42-1"><a href="spatreg.html#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co"># summary(impacts(model3, listw = lw, R = 500), zstats = TRUE) # Slow, but gives quantiles, standard errors and p-values</span></span></code></pre></div>
+<div class="sourceCode" id="cb106"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb106-1"><a href="spatreg.html#cb106-1" aria-hidden="true" tabindex="-1"></a><span class="co"># summary(impacts(model3, listw = lw, R = 500), zstats = TRUE) # Slow, but gives quantiles, standard errors and p-values</span></span></code></pre></div>
 <p>There are more extensions of these models <del>than you can shake a stick at</del> we could explore here - for example, SARAR or SARMA - and most of them are essentially different combinations of spatial lags and spatial error models. We can save them for a rainy day.</p>
 </div>
 </div>
