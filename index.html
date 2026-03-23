@@ -27,18 +27,21 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #141e30, #243b55);
-      color: white;
       text-align: center;
       position: relative;
+    
+      /* Background image */
+      background: url('images/main_image-mark-green-geovis-crop-compress.jpg') center/cover no-repeat;
+    
+      /* Overlay for dulling the image */
+      color: white;
     }
     
     .hero::after {
       content: "";
       position: absolute;
       top:0; left:0; width:100%; height:100%;
-      /* Optional overlay if using image background */
-      background: rgba(0,0,0,0.3);
+      background: rgba(0,0,0,0.4); /* Adjust 0.3–0.6 for darker/lighter overlay */
     }
 
     .hero h1 {
