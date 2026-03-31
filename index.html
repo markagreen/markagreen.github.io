@@ -83,6 +83,27 @@
       background-color: #f8f9fa;
     }*/
 
+    /* Links */
+    .icon-box {
+      width: 80px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+    }
+    
+    .icon-box img {
+      max-width: 60%;
+      max-height: 60%;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    
+    .icon-box img:hover {
+      transform: scale(1.15);
+      opacity: 0.8;
+    }
+    
     footer {
       background-color: #f8f9fa;
       padding: 2rem 1rem;
@@ -117,6 +138,7 @@
   <div data-aos="fade-up">
     <h1>Mark Green</h1>
     <p>Professor of Health Geography</p>
+    <p>University of Liverpool</p>
   </div>
 </section>
 
@@ -194,10 +216,18 @@
 <!-- Impact -->
 <section id="impact" class="container">
   <h2 data-aos="fade-up">Impact</h2>
+
+  /* Description of section */
+  <p class="text-center" data-aos="fade-up" data-aos-delay="100">
+    I work to translate research into practice, supporting policies that aim to 
+    improve health and make a positive difference to people’s lives.
+  </p>
+  
+  /* Video links */
   <div class="row g-4">
 
     <div class="col-md-6">
-      <div class="card p-3 h-100" data-aos="fade-up">
+      <div class="card p-3 h-100" data-aos="fade-up" data-aos-delay="150">
         <div class="ratio ratio-16x9 mb-3">
           <iframe src="https://www.youtube.com/embed/A2Jxr915h0M"
                   title="Impact video 1" allowfullscreen></iframe>
@@ -208,7 +238,7 @@
     </div>
 
     <div class="col-md-6">
-      <div class="card p-3 h-100" data-aos="fade-up" data-aos-delay="100">
+      <div class="card p-3 h-100" data-aos="fade-up" data-aos-delay="200">
         <div class="ratio ratio-16x9 mb-3">
           <iframe src="https://www.youtube.com/embed/zuuqp9Qn4yA"
                   title="Impact video 2" allowfullscreen></iframe>
@@ -222,12 +252,60 @@
 </section>
 
 <!-- Links -->
-<section id="links" class="container">
+<section id="links" class="container text-center">
   <h2 data-aos="fade-up">Links</h2>
-  <p class="text-center">Email: <a href="mailto:mark.green@liverpool.ac.uk">mark.green@liverpool.ac.uk</a></p>
-  <p class="text-center">LinkedIn: <a href="https://www.linkedin.com/in/mark-green-3b51915b/">LinkedIn Page</a></p>
-  <p class="text-center">Google Scholar: <a href="https://scholar.google.com/citations?user=_9XrEoIAAAAJ&hl=en">Full list of publications</a></p>
-  <p class="text-center">GitHub: <a href="https://github.com/markagreen" target="_blank">markagreen</a></p>
+
+  <div class="row justify-content-center mt-4">
+
+    <div class="col-4 col-md-2" data-aos="fade-up" data-aos-delay="100">
+      <a href="mailto:mark.green@liverpool.ac.uk">
+        <div class="icon-box">
+          <img src="images/icons/email.png" alt="Email">
+        </div>
+      </a>
+    </div>
+
+    <div class="col-4 col-md-2" data-aos="fade-up" data-aos-delay="150">
+      <a href="https://www.liverpool.ac.uk/people/mark-green" target="_blank">
+        <div class="icon-box">
+          <img src="images/icons/uol.jpg" alt="University Profile">
+        </div>
+      </a>
+    </div>
+
+    <div class="col-4 col-md-2" data-aos="fade-up" data-aos-delay="200">
+      <a href="https://scholar.google.com/citations?user=_9XrEoIAAAAJ&hl=en" target="_blank">
+        <div class="icon-box">
+          <img src="images/icons/google_scholar_icon_130918.png" alt="Google Scholar">
+        </div>
+      </a>
+    </div>
+
+    <div class="col-4 col-md-2" data-aos="fade-up" data-aos-delay="250">
+      <a href="https://www.linkedin.com/in/mark-green-3b51915b/" target="_blank">
+        <div class="icon-box">
+          <img src="images/icons/LinkedIn_icon.svg" alt="LinkedIn">
+        </div>
+      </a>
+    </div>
+
+    <div class="col-4 col-md-2" data-aos="fade-up" data-aos-delay="300">
+      <a href="https://github.com/markagreen" target="_blank">
+        <div class="icon-box">
+          <img src="images/icons/Octicons-mark-github.svg" alt="GitHub">
+        </div>
+      </a>
+    </div>
+    
+    <div class="col-4 col-md-2" data-aos="fade-up" data-aos-delay="350">
+      <a href="https://connecting-society.buzzsprout.com/" target="_blank">
+        <div class="icon-box">
+          <img src="images/icons/beezeestock-microphone-7502540_1280.png" alt="Podcast">
+        </div>
+      </a>
+    </div>
+
+  </div>
 </section>
 
 <!-- Footer -->
