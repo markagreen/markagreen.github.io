@@ -10,9 +10,8 @@ if (menuToggle && navLinks) {
 }
 
 // Countdown
-// IMPORTANT: change this to your wedding date/time.
 // Format: YYYY-MM-DDTHH:MM:SS in the venue's local time.
-const weddingDate = new Date("2026-09-12T14:00:00");
+const weddingDate = new Date("2027-06-26T14:00:00");
 
 function updateCountdown() {
   const countdown = document.getElementById("countdown");
