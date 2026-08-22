@@ -11,8 +11,9 @@
   --sans: "Montserrat", Arial, sans-serif;
 }
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.8; }
+html { scroll-behavior: smooth; max-width: 100%; overflow-x: hidden; }
+body { margin: 0; max-width: 100%; overflow-x: hidden; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.8; }
+img, iframe { max-width: 100%; }
 a { color: inherit; text-decoration: none; }
 .navbar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
