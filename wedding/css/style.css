@@ -129,5 +129,4 @@ footer a { opacity:.7; }
   .timeline-item { grid-template-columns:1fr; gap:2px; padding-left:25px; }
   .timeline-item time { padding-top:0; }
   .page-hero { padding:75px 6% 60px; }
-  .story-image { min-height:280px; }
 }
